@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { supabase, Player } from '@/lib/supabase';
 import { Plus, User, Calendar } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { PlayerProfileModal } from '@/components/PlayerProfileModal';
 
 export default function AdminPlayers() {
+  const { isAdmin } = useAuth();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -12,6 +15,7 @@ export default function AdminPlayers() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
 
   const fetchPlayers = async () => {
     const { data, error } = await supabase
@@ -22,6 +26,13 @@ export default function AdminPlayers() {
     if (error) {
       setError(error.message);
     } else {
+      // Se o player selecionado foi atualizado, atualizar o modal
+      if (selectedPlayer) {
+        const updatedPlayer = (data || []).find(p => p.id === selectedPlayer.id);
+        if (updatedPlayer) {
+          setSelectedPlayer(updatedPlayer);
+        }
+      }
       setPlayers(data || []);
     }
     setLoading(false);
@@ -71,13 +82,15 @@ export default function AdminPlayers() {
           <h1 className="text-3xl md:text-4xl font-heading font-bold text-neon-purple">
             Gerenciar Players
           </h1>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Plus size={20} />
-            <span className="hidden sm:inline">Novo Player</span>
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="btn-primary flex items-center gap-2"
+            >
+              <Plus size={20} />
+              <span className="hidden sm:inline">Novo Player</span>
+            </button>
+          )}
         </div>
 
         {/* Success Message */}
@@ -95,7 +108,7 @@ export default function AdminPlayers() {
         )}
 
         {/* Create Form */}
-        {showForm && (
+        {showForm && isAdmin && (
           <div className="card-base p-6 mb-8">
             <h2 className="text-xl font-heading font-semibold text-foreground mb-4">
               Criar Novo Player
@@ -185,7 +198,11 @@ export default function AdminPlayers() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {players.map((player) => (
-                    <tr key={player.id} className="hover:bg-muted/20 transition-colors">
+                    <tr 
+                      key={player.id} 
+                      className="hover:bg-muted/20 transition-colors cursor-pointer"
+                      onClick={() => setSelectedPlayer(player)}
+                    >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
@@ -230,6 +247,13 @@ export default function AdminPlayers() {
             </div>
           )}
         </div>
+
+        {/* Player Profile Modal */}
+        <PlayerProfileModal
+          player={selectedPlayer}
+          onClose={() => setSelectedPlayer(null)}
+          onClaimSuccess={fetchPlayers}
+        />
       </div>
     </Layout>
   );

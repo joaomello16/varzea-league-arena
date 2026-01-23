@@ -32,7 +32,8 @@ export function Header() {
   const navItems = [
     { path: '/leaderboard', label: 'Leaderboard' },
     { path: '/campeonatos', label: 'Campeonatos' },
-    ...(isAdmin ? [{ path: '/admin/players', label: 'Admin' }] : []),
+    { path: '/players', label: 'Players' },
+    ...(isAdmin ? [{ path: '/admin/requests', label: 'Solicitações' }] : []),
   ];
 
   return (

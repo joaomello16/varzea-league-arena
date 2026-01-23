@@ -24,3 +24,20 @@ export interface Player {
   user_id: string | null;
   rating?: number;
 }
+
+export interface PlayerClaim {
+  id: string;
+  user_id: string;
+  player_id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+}
+
+export interface PlayerClaimPending {
+  id: string;
+  player_nick: string;
+  player_avatar_url: string | null;
+  user_nick: string;
+  user_email: string;
+  created_at: string;
+}

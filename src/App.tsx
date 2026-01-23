@@ -13,6 +13,7 @@ import Leaderboard from "./pages/Leaderboard";
 import Campeonatos from "./pages/Campeonatos";
 import Profile from "./pages/Profile";
 import AdminPlayers from "./pages/AdminPlayers";
+import Requests from "./pages/Requests";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,10 +54,18 @@ const App = () => (
               }
             />
             <Route
-              path="/admin/players"
+              path="/players"
+              element={
+                <ProtectedRoute>
+                  <AdminPlayers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/requests"
               element={
                 <ProtectedRoute requireAdmin>
-                  <AdminPlayers />
+                  <Requests />
                 </ProtectedRoute>
               }
             />
