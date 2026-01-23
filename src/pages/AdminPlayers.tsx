@@ -88,6 +88,7 @@ function PlayerTableRow({
 }
 
 export default function AdminPlayers() {
+  const [search, setSearch] = useState('');
   const { isAdmin } = useAuth();
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,15 +105,25 @@ export default function AdminPlayers() {
   const [totalCount, setTotalCount] = useState(0);
   const itemsPerPage = 10;
 
-  const fetchPlayers = async (page: number = 1) => {
+  const fetchPlayers = async (page: number = 1, searchTerm: string = '') => {
     setLoading(true);
     const start = (page - 1) * itemsPerPage;
     
-    const { data, error, count } = await supabase
-      .from('players')
-      .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(start, start + itemsPerPage - 1);
+  let query = supabase
+  .from('players')
+  .select('*', { count: 'exact' })
+  .order('created_at', { ascending: false });
+
+if (searchTerm.trim()) {
+  query = query.ilike('nick', `%${searchTerm}%`);
+}
+
+const { data, error, count } = await query.range(
+  start,
+  start + itemsPerPage - 1
+);
+
+      
 
     if (error) {
       setError(error.message);
@@ -275,6 +286,20 @@ export default function AdminPlayers() {
           </div>
         )}
 
+        {/* Search */}
+<div className="mb-4 max-w-md">
+  <input
+    type="text"
+    value={search}
+    onChange={(e) => {
+      setSearch(e.target.value);
+      fetchPlayers(1, e.target.value);
+    }}
+    placeholder="Buscar player pelo nick..."
+    className="input-base w-full"
+  />
+</div>
+
         {/* Players List */}
         <div className="card-base overflow-hidden">
           {loading ? (
@@ -346,6 +371,21 @@ export default function AdminPlayers() {
             </div>
           )}
         </div>
+
+        {/* Claim Player Info */}
+{!isAdmin && (
+  <div className="mt-8">
+    <div className="card-base p-5 bg-muted/30 border border-border">
+      <p className="text-sm text-muted-foreground text-center leading-relaxed">
+        <span className="block font-heading font-semibold text-foreground mb-1">
+          Quer editar seu perfil de jogador?
+        </span>
+        <span className="font-semibold text-foreground"></span> Solicite a
+        vinculação ao perfil desejado (Botão Este Player sou eu) e aguarde a aprovação de um administrador.
+      </p>
+    </div>
+  </div>
+)}
 
         {/* Player Profile Modal */}
         <PlayerProfileModal

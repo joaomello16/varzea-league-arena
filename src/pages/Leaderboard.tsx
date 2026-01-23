@@ -291,6 +291,21 @@ export default function Leaderboard() {
             </div>
           </div>
         </div>
+        
+        {user && user.player_id === null && (
+  <div className="mt-10">
+    <div className="card-base p-5 bg-muted/30 border border-border">
+      <p className="text-sm text-muted-foreground text-center leading-relaxed">
+        <span className="block font-heading font-semibold text-foreground mb-1">
+          Quer editar seu perfil de jogador?
+        </span>
+        Para reivindicar um player, acesse a aba{' '}
+        <span className="font-semibold text-foreground">Players</span>, solicite a
+        vinculação ao perfil desejado e aguarde a aprovação de um administrador.
+      </p>
+    </div>
+  </div>
+)}
 
         {/* Mobile Player Modal */}
         {isMobileModalOpen && selectedPlayer && (

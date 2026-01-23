@@ -7,6 +7,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export type UserType = 'user' | 'admin';
 
+
 export interface User {
   id: string;
   nick: string;
