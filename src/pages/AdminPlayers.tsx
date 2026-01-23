@@ -1,9 +1,91 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { supabase, Player } from '@/lib/supabase';
-import { Plus, User, Calendar } from 'lucide-react';
+import { Plus, User, Calendar, Edit2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { PlayerProfileModal } from '@/components/PlayerProfileModal';
+import { PlayerEditModal } from '@/components/PlayerEditModal';
+import { useCanEditPlayer } from '@/hooks/use-can-edit-player';
+
+function PlayerTableRow({
+  player,
+  formatDate,
+  onSelectPlayer,
+  onEditClick,
+}: {
+  player: Player;
+  formatDate: (date: string) => string;
+  onSelectPlayer: (player: Player) => void;
+  onEditClick: (player: Player) => void;
+}) {
+  const canEdit = useCanEditPlayer(player);
+
+  return (
+    <tr 
+      className="hover:bg-muted/20 transition-colors cursor-pointer"
+      onClick={() => onSelectPlayer(player)}
+    >
+      <td className="px-6 py-4">
+        <div className="flex items-center gap-3 justify-between">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden border border-border">
+                {player.avatar_url ? (
+                  <img
+                    src={player.avatar_url}
+                    alt={player.nick}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User size={20} className="text-muted-foreground" />
+                )}
+              </div>
+              {player.cover_url && (
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-card bg-muted flex items-center justify-center">
+                  <div className="w-3 h-2 bg-primary rounded-sm" />
+                </div>
+              )}
+            </div>
+            <span className="font-heading font-semibold text-foreground">
+              {player.nick}
+            </span>
+          </div>
+          {canEdit && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditClick(player);
+              }}
+              className="p-2 hover:bg-primary/20 rounded-lg transition-colors text-primary"
+              title="Editar perfil"
+            >
+              <Edit2 size={18} />
+            </button>
+          )}
+        </div>
+      </td>
+      <td className="px-6 py-4 hidden sm:table-cell">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Calendar size={16} />
+          <span className="text-sm">
+            {formatDate(player.created_at)}
+          </span>
+        </div>
+      </td>
+      <td className="px-6 py-4 hidden md:table-cell">
+        <span
+          className={`px-2 py-1 rounded text-xs font-medium ${
+            player.user_id
+              ? 'bg-success/20 text-success'
+              : 'bg-muted text-muted-foreground'
+          }`}
+        >
+          {player.user_id ? 'Sim' : 'Não'}
+        </span>
+      </td>
+    </tr>
+  );
+}
 
 export default function AdminPlayers() {
   const { isAdmin } = useAuth();
@@ -16,12 +98,21 @@ export default function AdminPlayers() {
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [selectedPlayerForEdit, setSelectedPlayerForEdit] = useState<Player | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const itemsPerPage = 10;
 
-  const fetchPlayers = async () => {
-    const { data, error } = await supabase
+  const fetchPlayers = async (page: number = 1) => {
+    setLoading(true);
+    const start = (page - 1) * itemsPerPage;
+    
+    const { data, error, count } = await supabase
       .from('players')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(start, start + itemsPerPage - 1);
 
     if (error) {
       setError(error.message);
@@ -34,12 +125,14 @@ export default function AdminPlayers() {
         }
       }
       setPlayers(data || []);
+      setTotalCount(count || 0);
+      setCurrentPage(page);
     }
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchPlayers();
+    fetchPlayers(1);
   }, []);
 
   const handleCreatePlayer = async (e: React.FormEvent) => {
@@ -52,6 +145,7 @@ export default function AdminPlayers() {
       nick: nick.trim(),
       user_id: null,
       avatar_url: null,
+      cover_url: null,
       bio: null,
     });
 
@@ -73,6 +167,19 @@ export default function AdminPlayers() {
       month: 'short',
       year: 'numeric',
     });
+  };
+
+  const handlePlayerUpdate = (updatedPlayer: Player) => {
+    // Atualizar player na lista
+    setPlayers(
+      players.map((p) => (p.id === updatedPlayer.id ? updatedPlayer : p))
+    );
+    // Atualizar player selecionado se for o mesmo
+    if (selectedPlayer?.id === updatedPlayer.id) {
+      setSelectedPlayer(updatedPlayer);
+    }
+    setIsEditModalOpen(false);
+    setSelectedPlayerForEdit(null);
   };
 
   return (
@@ -198,52 +305,44 @@ export default function AdminPlayers() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {players.map((player) => (
-                    <tr 
-                      key={player.id} 
-                      className="hover:bg-muted/20 transition-colors cursor-pointer"
-                      onClick={() => setSelectedPlayer(player)}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                            {player.avatar_url ? (
-                              <img
-                                src={player.avatar_url}
-                                alt={player.nick}
-                                className="w-full h-full rounded-full object-cover"
-                              />
-                            ) : (
-                              <User size={20} className="text-muted-foreground" />
-                            )}
-                          </div>
-                          <span className="font-heading font-semibold text-foreground">
-                            {player.nick}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 hidden sm:table-cell">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Calendar size={16} />
-                          <span className="text-sm">
-                            {formatDate(player.created_at)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 hidden md:table-cell">
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${
-                            player.user_id
-                              ? 'bg-success/20 text-success'
-                              : 'bg-muted text-muted-foreground'
-                          }`}
-                        >
-                          {player.user_id ? 'Sim' : 'Não'}
-                        </span>
-                      </td>
-                    </tr>
+                    <PlayerTableRow
+                      key={player.id}
+                      player={player}
+                      formatDate={formatDate}
+                      onSelectPlayer={setSelectedPlayer}
+                      onEditClick={(p) => {
+                        setSelectedPlayerForEdit(p);
+                        setIsEditModalOpen(true);
+                      }}
+                    />
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {!loading && players.length > 0 && (
+            <div className="flex items-center justify-between p-4 border-t border-border">
+              <div className="text-sm text-muted-foreground">
+                Página {currentPage} de {Math.ceil(totalCount / itemsPerPage)} 
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => fetchPlayers(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="btn-ghost disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ← Anterior
+                </button>
+                <button
+                  onClick={() => fetchPlayers(currentPage + 1)}
+                  disabled={currentPage >= Math.ceil(totalCount / itemsPerPage)}
+                  className="btn-ghost disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Próxima →
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -254,6 +353,18 @@ export default function AdminPlayers() {
           onClose={() => setSelectedPlayer(null)}
           onClaimSuccess={fetchPlayers}
         />
+
+        {/* Player Edit Modal */}
+        {isEditModalOpen && selectedPlayerForEdit && (
+          <PlayerEditModal
+            player={selectedPlayerForEdit}
+            onClose={() => {
+              setIsEditModalOpen(false);
+              setSelectedPlayerForEdit(null);
+            }}
+            onSaveSuccess={handlePlayerUpdate}
+          />
+        )}
       </div>
     </Layout>
   );

@@ -1,9 +1,33 @@
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { User, Mail, Shield, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+interface LinkedPlayer {
+  nick: string;
+}
 
 export default function Profile() {
   const { user, session } = useAuth();
+  const [linkedPlayer, setLinkedPlayer] = useState<LinkedPlayer | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.player_id) {
+      const fetchLinkedPlayer = async () => {
+        setLoading(true);
+        const { data } = await supabase
+          .from('players')
+          .select('nick')
+          .eq('id', user.player_id)
+          .single();
+        setLinkedPlayer(data as LinkedPlayer);
+        setLoading(false);
+      };
+      fetchLinkedPlayer();
+    }
+  }, [user?.player_id]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
@@ -77,9 +101,14 @@ export default function Profile() {
             {/* Player Link Info */}
             {user?.player_id ? (
               <div className="mt-8 p-4 bg-success/10 border border-success/30 rounded-lg">
-                <p className="text-success text-sm">
+                <p className="text-success text-sm mb-2">
                   ✓ Sua conta está vinculada a um perfil de player
                 </p>
+                {loading ? (
+                  <p className="text-muted-foreground text-sm">Carregando...</p>
+                ) : linkedPlayer ? (
+                  <p className="text-foreground font-medium">{linkedPlayer.nick}</p>
+                ) : null}
               </div>
             ) : (
               <div className="mt-8 p-4 bg-muted/30 border border-border rounded-lg">

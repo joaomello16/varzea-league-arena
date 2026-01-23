@@ -2,7 +2,15 @@ import { useState } from 'react';
 import { Player } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { X, User as UserIcon } from 'lucide-react';
+import { X, User as UserIcon, Star } from 'lucide-react';
+
+// Mock titles for display
+const mockTitles: Record<string, string[]> = {
+  default: [
+    'Varzea League S2 – Campeão',
+    'Varzea League S1 – Vice-campeão',
+  ],
+};
 
 interface PlayerProfileModalProps {
   player: Player | null;
@@ -18,6 +26,9 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
   const [claimed, setClaimed] = useState(false);
 
   if (!player) return null;
+
+  // Verificar se é meu próprio player
+  const isMyPlayer = user && user.player_id === player.id;
 
   // Verificar se o botão "Este player sou eu" deve aparecer
   const shouldShowClaimButton =
@@ -54,21 +65,30 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="card-base w-full max-w-md relative">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="card-base w-full max-w-md relative overflow-hidden">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1 hover:bg-muted rounded-lg transition-colors"
+          className="absolute top-4 right-4 p-1 hover:bg-muted rounded-lg transition-colors z-10"
         >
           <X size={20} className="text-muted-foreground" />
         </button>
 
         {/* Content */}
-        <div className="p-6">
-          {/* Avatar */}
-          <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+        <div>
+          {/* Cover */}
+          {player.cover_url && (
+            <img
+              src={player.cover_url}
+              alt="Cover"
+              className="w-full h-32 object-cover"
+            />
+          )}
+
+          <div className={`flex flex-col items-center text-center ${player.cover_url ? 'pt-4' : 'pt-6'} px-6 pb-6`}>
+            {/* Avatar */}
+            <div className={`w-24 h-24 rounded-full bg-muted flex items-center justify-center border-2 border-primary/30 overflow-hidden ${player.cover_url ? '-mt-12 border-4 border-card' : 'mb-4'}`}>
               {player.avatar_url ? (
                 <img
                   src={player.avatar_url}
@@ -76,75 +96,104 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <UserIcon size={40} className="text-muted-foreground" />
+                <UserIcon size={48} className="text-muted-foreground" />
               )}
             </div>
-          </div>
 
-          {/* Nick */}
-          <h2 className="text-2xl font-heading font-bold text-center text-foreground mb-4">
-            {player.nick}
-          </h2>
+            {player.cover_url && <div className="mb-2" />}
 
-          {/* Bio */}
-          {player.bio && (
-            <p className="text-center text-muted-foreground mb-6">
-              {player.bio}
-            </p>
-          )}
+            {/* Nick */}
+            <h2 className="text-2xl font-heading font-bold text-neon-blue mb-2">
+              {player.nick}
+            </h2>
 
-          {/* Claim Status */}
-          {!shouldShowClaimButton && player.user_id !== null && (
-            <div className="card-base p-4 bg-muted/30 mb-4">
-              <p className="text-sm text-muted-foreground text-center">
-                Este player já está vinculado a uma conta
+            {/* Rating */}
+            <div className="flex items-center gap-2 mb-4">
+              <Star size={18} className="text-accent" />
+              <span className="font-heading font-semibold text-foreground">
+                {player.rating ?? 1000} pts
+              </span>
+            </div>
+
+            {/* Bio */}
+            {player.bio && (
+              <p className="text-muted-foreground text-sm mb-6">
+                {player.bio}
               </p>
-            </div>
-          )}
+            )}
 
-          {!shouldShowClaimButton && user && user.player_id !== null && (
-            <div className="card-base p-4 bg-muted/30 mb-4">
-              <p className="text-sm text-muted-foreground text-center">
-                Você já possui um player vinculado
-              </p>
+            {/* Titles */}
+            <div className="w-full mb-6">
+              <h3 className="text-sm font-heading font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
+                Títulos
+              </h3>
+              <div className="space-y-2">
+                {(mockTitles[player.id] || mockTitles.default).map((title, i) => (
+                  <div
+                    key={i}
+                    className="bg-muted/50 rounded px-3 py-2 text-sm text-foreground"
+                  >
+                    {title}
+                  </div>
+                ))}
+              </div>
             </div>
-          )}
 
-          {/* Messages */}
-          {claimMessage && (
-            <div className="card-base p-4 border-success/50 bg-success/10 mb-4">
-              <p className="text-success text-sm">{claimMessage}</p>
-            </div>
-          )}
+            {/* Vinculação Info */}
+            {isMyPlayer && (
+              <div className="card-base p-3 bg-success/10 border border-success/30 mb-4 w-full">
+                <p className="text-sm text-success text-center">
+                  ✓ Este é o seu player
+                </p>
+              </div>
+            )}
 
-          {claimError && (
-            <div className="card-base p-4 border-destructive/50 bg-destructive/10 mb-4">
-              <p className="text-destructive text-sm">{claimError}</p>
-            </div>
-          )}
+            {!shouldShowClaimButton && player.user_id !== null && !isMyPlayer && (
+              <div className="card-base p-3 bg-muted/30 mb-4 w-full">
+                <p className="text-sm text-muted-foreground text-center">
+                  Este player já está vinculado a uma conta
+                </p>
+              </div>
+            )}
 
-          {/* Claim Button */}
-          {shouldShowClaimButton && (
-            <button
-              onClick={handleClaimPlayer}
-              disabled={claimLoading}
-              className="btn-primary w-full mb-4 flex items-center justify-center gap-2"
-            >
-              {claimLoading ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                'Este player sou eu'
-              )}
+
+
+            {/* Messages */}
+            {claimMessage && (
+              <div className="card-base p-4 border-success/50 bg-success/10 mb-4 w-full">
+                <p className="text-success text-sm">{claimMessage}</p>
+              </div>
+            )}
+
+            {claimError && (
+              <div className="card-base p-4 border-destructive/50 bg-destructive/10 mb-4 w-full">
+                <p className="text-destructive text-sm">{claimError}</p>
+              </div>
+            )}
+
+            {/* Claim Button */}
+            {shouldShowClaimButton && (
+              <button
+                onClick={handleClaimPlayer}
+                disabled={claimLoading}
+                className="btn-primary w-full mb-4 flex items-center justify-center gap-2"
+              >
+                {claimLoading ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  'Este player sou eu'
+                )}
+              </button>
+            )}
+
+            {/* Close Button */}
+            <button onClick={onClose} className="btn-ghost w-full">
+              Fechar
             </button>
-          )}
-
-          {/* Close Button */}
-          <button onClick={onClose} className="btn-ghost w-full">
-            Fechar
-          </button>
+          </div>
         </div>
       </div>
     </div>
