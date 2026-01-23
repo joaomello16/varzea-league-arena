@@ -68,7 +68,7 @@ export default function Register() {
                 value={nick}
                 onChange={(e) => setNick(e.target.value)}
                 className="input-base"
-                placeholder="SeuNickGamer"
+                placeholder="Nick no Jogo"
                 required
                 minLength={3}
               />
