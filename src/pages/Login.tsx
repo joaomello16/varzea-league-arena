@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import logo from '@/assets/varzealogo.png';
+import logo from '@/assets/logo1-removebg-preview.png';
 
 export default function Login() {
   const { session, signIn, loading } = useAuth();
