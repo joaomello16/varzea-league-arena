@@ -1,16 +1,17 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, AuthError } from '@supabase/supabase-js';
-import { supabase, User } from '@/lib/supabase';
+import { supabase, User, registerUserWithPlayer } from '@/lib/supabase';
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
-  signUp: (email: string, password: string, nick: string) => Promise<{ error: AuthError | Error | null }>;
+  signUp: (email: string, password: string, nick: string, playerId?: string) => Promise<{ error: AuthError | Error | null }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
 }
+
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -77,19 +78,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, nick: string) => {
+  const signUp = async (email: string, password: string, nick: string, playerId?: string) => {
     // Signup via Supabase Auth only
     // The public.users record is created automatically by a database trigger
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: window.location.origin,
         data: {
           nick: nick,
+          player_id: playerId || null,
         },
       },
     });
+
+    if (error) {
+      return { error };
+    }
+
+    // If playerId is provided, call the RPC function to link the player
+    if (playerId && data?.user?.id) {
+      const { error: rpcError } = await registerUserWithPlayer(data.user.id, playerId);
+      if (rpcError) {
+        return { error: rpcError };
+      }
+    }
 
     return { error };
   };

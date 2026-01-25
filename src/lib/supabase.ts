@@ -43,3 +43,25 @@ export interface PlayerClaimPending {
   user_email: string;
   created_at: string;
 }
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  metadata: Record<string, any>;
+  read: boolean;
+  created_at: string;
+}
+
+// RPC call to register a user with a player
+export async function registerUserWithPlayer(
+  userId: string,
+  playerId: string
+) {
+  const { error } = await supabase.rpc('register_user_with_player', {
+    p_user_id: userId,
+    p_player_id: playerId,
+  });
+
+  return { error };
+}

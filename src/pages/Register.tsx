@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { PlayerSelect } from '@/components/PlayerSelect';
+import { PlayerRequestModal } from '@/components/PlayerRequestModal';
 import logo from '@/assets/varzealogo.png';
 
 export default function Register() {
@@ -9,8 +11,12 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [nick, setNick] = useState('');
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [selectedPlayerNick, setSelectedPlayerNick] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPlayerRequestOpen, setIsPlayerRequestOpen] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
 
   if (loading) {
     return null;
@@ -34,9 +40,14 @@ export default function Register() {
       return;
     }
 
+    if (!selectedPlayerId && !requestSent) {
+      setError('Selecione um player ou envie uma solicitação');
+      return;
+    }
+
     setIsSubmitting(true);
 
-    const { error } = await signUp(email, password, nick);
+    const { error } = await signUp(email, password, nick, selectedPlayerId || undefined);
     
     if (error) {
       setError(error.message);
@@ -44,6 +55,18 @@ export default function Register() {
     
     setIsSubmitting(false);
   };
+
+  const handlePlayerSelect = (playerId: string, playerNick: string) => {
+    setSelectedPlayerId(playerId);
+    setSelectedPlayerNick(playerNick);
+    setRequestSent(false);
+  };
+
+  const handlePlayerRequestSuccess = () => {
+    setIsPlayerRequestOpen(false);
+    setRequestSent(true);
+  };
+
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
@@ -120,6 +143,20 @@ export default function Register() {
                 minLength={6}
               />
             </div>
+
+            <div className="bg-muted/50 p-3 rounded-md border border-border">
+              <PlayerSelect
+                selectedPlayerId={selectedPlayerId}
+                onSelect={handlePlayerSelect}
+                onPlayerNotFound={() => setIsPlayerRequestOpen(true)}
+              />
+
+              {requestSent && (
+                <div className="mt-3 p-2 bg-green-900/20 border border-green-900/30 rounded text-sm text-green-600 flex items-center gap-2">
+                  ✓ Solicitação enviada com sucesso
+                </div>
+              )}
+            </div>
             
             {error && (
               <p className="text-destructive text-sm text-center">{error}</p>
@@ -149,6 +186,13 @@ export default function Register() {
           </p>
         </div>
       </div>
+
+      <PlayerRequestModal
+        isOpen={isPlayerRequestOpen}
+        onClose={() => setIsPlayerRequestOpen(false)}
+        onSuccess={handlePlayerRequestSuccess}
+      />
     </div>
   );
 }
+
