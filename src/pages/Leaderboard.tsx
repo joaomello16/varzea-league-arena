@@ -449,7 +449,8 @@ export default function Leaderboard() {
                   disabled={page === 1}
                   className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  ← Anterior
+                  <span className="hidden sm:inline">← Anterior</span>
+                  <span className="sm:hidden">←</span>
                 </button>
 
                 <div className="flex items-center gap-1">
@@ -476,7 +477,8 @@ export default function Leaderboard() {
                   disabled={page === totalPages}
                   className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Próxima →
+                  <span className="hidden sm:inline">Próxima →</span>
+                  <span className="sm:hidden">→</span>
                 </button>
               </div>
             )}
@@ -500,8 +502,14 @@ export default function Leaderboard() {
 
         {/* Mobile Player Modal */}
         {isMobileModalOpen && selectedPlayer && (
-          <div className="lg:hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4">
-            <div className="relative w-full max-w-md">
+          <div 
+            className="lg:hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4"
+            onClick={() => setIsMobileModalOpen(false)}
+          >
+            <div 
+              className="relative w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+            >
               {/* Close */}
               <button
                 onClick={() => setIsMobileModalOpen(false)}
