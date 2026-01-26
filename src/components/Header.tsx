@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase, Player } from '@/lib/supabase';
 import logo from '@/assets/logo1-removebg-preview.png';
 import { Menu, X, User, LogOut, ChevronDown, Bell } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 
 export type Notification = {
   id: string;
@@ -24,6 +24,7 @@ export function Header() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
+  const [playerAvatar, setPlayerAvatar] = useState<string | null>(null);
   const unreadCount = notifications.filter(n => !n.read).length;
 
 
@@ -45,6 +46,30 @@ export function Header() {
 
     fetchNotifications();
   }, [user?.id]);
+
+  // Fetch player avatar
+  useEffect(() => {
+    if (!user?.player_id) {
+      setPlayerAvatar(null);
+      return;
+    }
+
+    async function fetchPlayerAvatar() {
+      const { data } = await supabase
+        .from('players')
+        .select('avatar_url')
+        .eq('id', user.player_id)
+        .single();
+      
+      if (data?.avatar_url) {
+        setPlayerAvatar(data.avatar_url);
+      } else {
+        setPlayerAvatar(null);
+      }
+    }
+
+    fetchPlayerAvatar();
+  }, [user?.player_id]);
 
 
   useEffect(() => {
@@ -218,8 +243,16 @@ export function Header() {
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
               >
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                  <User size={18} className="text-primary" />
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+                  {playerAvatar ? (
+                    <img
+                      src={playerAvatar}
+                      alt={user?.nick}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User size={18} className="text-primary" />
+                  )}
                 </div>
                 <span className="hidden md:block font-heading font-semibold text-foreground">
                   {user?.nick}

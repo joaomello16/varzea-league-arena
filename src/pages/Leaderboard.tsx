@@ -6,21 +6,36 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCanEditPlayer } from '@/hooks/use-can-edit-player';
 import { PlayerEditModal } from '@/components/PlayerEditModal';
 
-// Mock titles for display
-const mockTitles: Record<string, string[]> = {
-  default: [
-    'Varzea League S2 – Campeão',
-    'Varzea League S1 – Vice-campeão',
-  ],
-};
+// Tipos para leaderboard
+interface LeaderboardEntry {
+  season_id: string;
+  player_id: string;
+  rating: number;
+  total_kills: number;
+  total_position_points: number;
+}
+
+// Tipos para títulos
+interface PlayerTitle {
+  player_id: string;
+  tournament_id: string;
+  tournament_name: string;
+  edition: string;
+  season_id: string;
+  season_name: string;
+  position: 1 | 2 | 3;
+  title_label: string;
+}
 
 function PlayerCard({
   player,
   rank,
+  titles = [],
   onEditClick,
 }: {
   player: Player;
   rank: number;
+  titles?: PlayerTitle[];
   onEditClick?: () => void;
 }) {
   const canEdit = useCanEditPlayer(player);
@@ -81,16 +96,35 @@ function PlayerCard({
           <h3 className="text-sm font-heading font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
             Títulos
           </h3>
-          <div className="space-y-2">
-            {(mockTitles[player.id] || mockTitles.default).map((title, i) => (
-              <div
-                key={i}
-                className="bg-muted/50 rounded px-3 py-2 text-sm text-foreground"
-              >
-                {title}
-              </div>
-            ))}
-          </div>
+          {titles.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-2">
+              Nenhum título conquistado
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {titles.map((title, i) => {
+                const colorClasses = {
+  // 💎 Campeão — Diamante
+  1: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
+
+  // 🟦 Vice — Platina
+  2: 'bg-indigo-500/15 text-indigo-300 border border-indigo-400/40',
+
+  // 🟨 Terceiro — Ouro
+   3: 'bg-slate-400/20 text-slate-300 border border-slate-400/30',
+                };
+
+                return (
+                  <div
+                    key={i}
+                    className={`rounded px-3 py-2 text-sm ${colorClasses[title.position]}`}
+                  >
+                    {title.tournament_name} – {title.title_label}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Edit Button */}
@@ -200,36 +234,154 @@ export default function Leaderboard() {
   const [error, setError] = useState<string | null>(null);
   const [isMobileModalOpen, setIsMobileModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [selectedPlayerTitles, setSelectedPlayerTitles] = useState<PlayerTitle[]>([]);
+  const pageSize = 10;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const totalPages = Math.ceil(totalCount / pageSize);
 
   useEffect(() => {
     async function fetchPlayers() {
-      const { data, error } = await supabase
-        .from('players')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
+      try {
+        // 1. Buscar temporada ativa
+        const { data: seasonData, error: seasonError } = await supabase
+          .from('seasons')
+          .select('id')
+          .eq('active', true)
+          .limit(1)
+          .single();
 
-      if (error) {
-        setError(error.message);
-      } else {
-        setPlayers(data || []);
-        if (data && data.length > 0) {
-          setSelectedPlayer(data[0]);
+        if (seasonError) {
+          console.warn('Erro ao buscar temporada ativa:', seasonError);
+          setError('Erro ao buscar temporada ativa');
+          setLoading(false);
+          return;
         }
+
+        const seasonId = seasonData?.id;
+
+        // 2. Buscar leaderboard da temporada ativa com paginação
+        const leaderboardMap = new Map<string, LeaderboardEntry>();
+        let leaderboardPlayerIds: string[] = [];
+        if (seasonId) {
+          const { data: leaderboardData, error: leaderboardError, count } = await supabase
+            .from('leaderboard_by_season')
+            .select('*', { count: 'exact' })
+            .eq('season_id', seasonId)
+            .order('rating', { ascending: false })
+            .range(from, to);
+
+          if (leaderboardError) {
+            console.warn('Erro ao buscar leaderboard:', leaderboardError);
+          } else {
+            setTotalCount(count || 0);
+            if (leaderboardData) {
+              leaderboardData.forEach((entry: LeaderboardEntry) => {
+                leaderboardMap.set(entry.player_id, entry);
+                leaderboardPlayerIds.push(entry.player_id);
+              });
+            }
+          }
+        }
+
+        // 3. Buscar apenas os players da página atual
+        const { data: playersData, error: playersError } = await supabase
+          .from('players')
+          .select('*')
+          .in('id', leaderboardPlayerIds.length > 0 ? leaderboardPlayerIds : ['']);
+
+        if (playersError) {
+          setError(playersError.message);
+          setLoading(false);
+          return;
+        }
+
+        // 4. Merge: combinar dados de players com leaderboard
+        const enrichedPlayers: Player[] = (playersData || [])
+          .map((player) => {
+            const leaderboardEntry = leaderboardMap.get(player.id);
+            return {
+              ...player,
+              rating: leaderboardEntry?.rating ?? 0,
+            };
+          })
+          // 5. Manter ordem do leaderboard
+          .sort((a, b) => {
+            const indexA = leaderboardPlayerIds.indexOf(a.id);
+            const indexB = leaderboardPlayerIds.indexOf(b.id);
+            return indexA - indexB;
+          });
+
+        setPlayers(enrichedPlayers);
+        if (enrichedPlayers.length > 0) {
+          setSelectedPlayer(enrichedPlayers[0]);
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     fetchPlayers();
-  }, []);
+  }, [page]);
+
+  // Fetch titles quando selectedPlayer mudar
+  useEffect(() => {
+    async function fetchTitles() {
+      if (!selectedPlayer) {
+        setSelectedPlayerTitles([]);
+        return;
+      }
+
+      try {
+        const { data: titlesData, error: titlesError } = await supabase
+          .from('player_titles')
+          .select('*')
+          .eq('player_id', selectedPlayer.id)
+          .order('season_name', { ascending: false });
+
+        if (titlesError) {
+          console.warn('Erro ao buscar títulos:', titlesError);
+          setSelectedPlayerTitles([]);
+        } else {
+          setSelectedPlayerTitles((titlesData as PlayerTitle[]) || []);
+        }
+      } catch (err) {
+        console.warn('Erro ao buscar títulos:', err);
+        setSelectedPlayerTitles([]);
+      }
+    }
+
+    fetchTitles();
+  }, [selectedPlayer?.id]);
 
   const handlePlayerUpdate = (updatedPlayer: Player) => {
-    // Atualizar player na lista
     setPlayers(
-      players.map((p) => (p.id === updatedPlayer.id ? updatedPlayer : p))
+      players.map((p) =>
+        p.id === updatedPlayer.id
+          ? {
+              ...p,               // mantém rating da view
+              ...updatedPlayer,   // atualiza avatar, bio, nick, etc
+              rating: p.rating,   // blinda explicitamente
+            }
+          : p
+      )
     );
-    // Atualizar player selecionado
-    setSelectedPlayer(updatedPlayer);
+
+    setSelectedPlayer((prev) =>
+      prev?.id === updatedPlayer.id
+        ? {
+            ...prev,
+            ...updatedPlayer,
+            rating: prev.rating,
+          }
+        : prev
+    );
+
     setIsEditModalOpen(false);
   };
 
@@ -254,8 +406,7 @@ export default function Leaderboard() {
             ) : selectedPlayer ? (
               <PlayerCard
                 player={selectedPlayer}
-                rank={players.findIndex((p) => p.id === selectedPlayer.id) + 1}
-                onEditClick={() => setIsEditModalOpen(true)}
+                rank={players.findIndex((p) => p.id === selectedPlayer.id) + (page - 1) * pageSize + 1}                titles={selectedPlayerTitles}                onEditClick={() => setIsEditModalOpen(true)}
               />
             ) : null}
           </div>
@@ -279,7 +430,7 @@ export default function Leaderboard() {
                   <RankingRow
                     key={player.id}
                     player={player}
-                    rank={index + 1}
+                    rank={(page - 1) * pageSize + index + 1}
                     isSelected={selectedPlayer?.id === player.id}
                     onClick={() => {
                       setSelectedPlayer(player);
@@ -289,6 +440,46 @@ export default function Leaderboard() {
                 ))
               )}
             </div>
+
+            {/* Pagination */}
+            {!loading && players.length > 0 && totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-8 pt-6 border-t border-border">
+                <button
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                  className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ← Anterior
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }).map((_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setPage(pageNum)}
+                        className={`w-10 h-10 rounded-lg font-heading font-semibold transition-all ${
+                          page === pageNum
+                            ? 'bg-primary text-primary-foreground'
+                            : 'card-interactive hover:border-primary/30'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
+                  disabled={page === totalPages}
+                  className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Próxima →
+                </button>
+              </div>
+            )}
           </div>
         </div>
         
@@ -321,7 +512,8 @@ export default function Leaderboard() {
 
               <PlayerCard
                 player={selectedPlayer}
-                rank={players.findIndex((p) => p.id === selectedPlayer.id) + 1}
+                rank={players.findIndex((p) => p.id === selectedPlayer.id) + (page - 1) * pageSize + 1}
+                titles={selectedPlayerTitles}
                 onEditClick={() => {
                   setIsMobileModalOpen(false);
                   setIsEditModalOpen(true);

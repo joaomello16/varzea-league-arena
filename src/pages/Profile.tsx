@@ -1,31 +1,31 @@
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { User, Mail, Shield, Calendar } from 'lucide-react';
+import { supabase, Player } from '@/lib/supabase';
+import { User, Mail, Shield, Calendar, Edit2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-
-interface LinkedPlayer {
-  nick: string;
-}
+import { PlayerEditModal } from '@/components/PlayerEditModal';
+import { useCanEditPlayer } from '@/hooks/use-can-edit-player';
 
 export default function Profile() {
   const { user, session } = useAuth();
-  const [linkedPlayer, setLinkedPlayer] = useState<LinkedPlayer | null>(null);
+  const [player, setPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const canEditPlayer = useCanEditPlayer(player);
 
   useEffect(() => {
     if (user?.player_id) {
-      const fetchLinkedPlayer = async () => {
+      const fetchPlayer = async () => {
         setLoading(true);
         const { data } = await supabase
           .from('players')
-          .select('nick')
+          .select('*')
           .eq('id', user.player_id)
           .single();
-        setLinkedPlayer(data as LinkedPlayer);
+        setPlayer(data as Player);
         setLoading(false);
       };
-      fetchLinkedPlayer();
+      fetchPlayer();
     }
   }, [user?.player_id]);
 
@@ -35,6 +35,11 @@ export default function Profile() {
       month: 'long',
       year: 'numeric',
     });
+  };
+
+  const handlePlayerUpdate = (updatedPlayer: Player) => {
+    setPlayer(updatedPlayer);
+    setIsEditModalOpen(false);
   };
 
   return (
@@ -48,12 +53,24 @@ export default function Profile() {
           <div className="card-base p-8">
             {/* Avatar */}
             <div className="flex flex-col items-center mb-8">
-              <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center mb-4 border-2 border-primary/30">
-                <User size={48} className="text-primary" />
+              <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center mb-4 border-2 border-primary/30 overflow-hidden">
+                {player?.avatar_url ? (
+                  <img
+                    src={player.avatar_url}
+                    alt={player.nick}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User size={48} className="text-primary" />
+                )}
               </div>
+
+              {/* Título principal: Nick do player se vinculado, senão nome da conta */}
               <h2 className="text-2xl font-heading font-bold text-foreground">
-                {user?.nick}
+                {player?.nick || user?.nick}
               </h2>
+
+              {/* Type badge */}
               <span
                 className={`mt-2 px-3 py-1 rounded-full text-sm font-heading font-semibold ${
                   user?.type === 'admin'
@@ -63,6 +80,13 @@ export default function Profile() {
               >
                 {user?.type === 'admin' ? 'Administrador' : 'Usuário'}
               </span>
+
+              {/* Bio do player */}
+              {player?.bio && (
+                <p className="mt-3 text-muted-foreground text-sm max-w-xs text-center">
+                  {player.bio}
+                </p>
+              )}
             </div>
 
             {/* Info */}
@@ -100,14 +124,31 @@ export default function Profile() {
 
             {/* Player Link Info */}
             {user?.player_id ? (
-              <div className="mt-8 p-4 bg-success/10 border border-success/30 rounded-lg">
-                <p className="text-success text-sm mb-2">
-                  ✓ Sua conta está vinculada a um perfil de player
-                </p>
+              <div className="mt-8 space-y-4">
                 {loading ? (
-                  <p className="text-muted-foreground text-sm">Carregando...</p>
-                ) : linkedPlayer ? (
-                  <p className="text-foreground font-medium">{linkedPlayer.nick}</p>
+                  <div className="p-4 bg-muted/30 border border-border rounded-lg">
+                    <p className="text-muted-foreground text-sm">Carregando perfil do jogador...</p>
+                  </div>
+                ) : player ? (
+                  <>
+                    <div className="p-4 bg-success/10 border border-success/30 rounded-lg">
+                      <p className="text-success text-sm mb-2">
+                        ✓ Sua conta está vinculada a um perfil de player
+                      </p>
+                      <p className="text-foreground font-medium">{player.nick}</p>
+                    </div>
+
+                    {/* Edit Button */}
+                    {canEditPlayer && (
+                      <button
+                        onClick={() => setIsEditModalOpen(true)}
+                        className="btn-primary w-full flex items-center justify-center gap-2"
+                      >
+                        <Edit2 size={16} />
+                        Editar Perfil de Jogador
+                      </button>
+                    )}
+                  </>
                 ) : null}
               </div>
             ) : (
@@ -120,6 +161,15 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {isEditModalOpen && player && (
+        <PlayerEditModal
+          player={player}
+          onClose={() => setIsEditModalOpen(false)}
+          onSaveSuccess={handlePlayerUpdate}
+        />
+      )}
     </Layout>
   );
 }
