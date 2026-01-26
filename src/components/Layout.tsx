@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Header } from './Header';
 import blizzard from '@/assets/blizzard5.png';
-import raven from '@/assets/vi5.png';
+import vi from '@/assets/vi5.png';
 
 interface LayoutProps {
   children: ReactNode;
@@ -17,12 +17,12 @@ export function Layout({ children, showCharacters = true }: LayoutProps) {
           <img
             src={blizzard}
             alt=""
-            className="character-bg hidden lg:block left-0 bottom-0 h-[80vh] max-h-[800px]"
+            className="character-bg hidden lg:block left-0 bottom-12 h-[80vh] max-h-[800px]"
           />
           <img
-            src={raven}
+            src={vi}
             alt=""
-            className="character-bg hidden lg:block right-0 bottom-0 h-[80vh] max-h-[800px]"
+            className="character-bg hidden lg:block right-0 bottom-12 h-[80vh] max-h-[800px]"
           />
         </>
       )}
