@@ -98,7 +98,7 @@ function PlayerCard({
           </h3>
           {titles.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-2">
-              Nenhum título conquistado
+              -
             </p>
           ) : (
             <div className="space-y-2">

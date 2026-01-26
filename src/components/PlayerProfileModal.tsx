@@ -1,16 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Player } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { X, User as UserIcon, Star } from 'lucide-react';
 
-// Mock titles for display
-const mockTitles: Record<string, string[]> = {
-  default: [
-    'Varzea League S2 – Campeão',
-    'Varzea League S1 – Vice-campeão',
-  ],
-};
+// Tipos para títulos
+interface PlayerTitle {
+  player_id: string;
+  tournament_id: string;
+  tournament_name: string;
+  edition: string;
+  season_id: string;
+  season_name: string;
+  position: 1 | 2 | 3;
+  title_label: string;
+}
 
 interface PlayerProfileModalProps {
   player: Player | null;
@@ -24,21 +28,51 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
   const [claimMessage, setClaimMessage] = useState<string | null>(null);
   const [claimError, setClaimError] = useState<string | null>(null);
   const [claimed, setClaimed] = useState(false);
+  const [titles, setTitles] = useState<PlayerTitle[]>([]);
 
-  if (!player) return null;
+  // Fetch titles quando o player mudar
+  useEffect(() => {
+    async function fetchTitles() {
+      if (!player) {
+        setTitles([]);
+        return;
+      }
+
+      try {
+        const { data: titlesData, error: titlesError } = await supabase
+          .from('player_titles')
+          .select('*')
+          .eq('player_id', player.id)
+          .order('season_name', { ascending: false });
+
+        if (titlesError) {
+          console.warn('Erro ao buscar títulos:', titlesError);
+          setTitles([]);
+        } else {
+          setTitles((titlesData as PlayerTitle[]) || []);
+        }
+      } catch (err) {
+        console.warn('Erro ao buscar títulos:', err);
+        setTitles([]);
+      }
+    }
+
+    fetchTitles();
+  }, [player?.id]);
 
   // Verificar se é meu próprio player
-  const isMyPlayer = user && user.player_id === player.id;
+  const isMyPlayer = player && user && user.player_id === player.id;
 
   // Verificar se o botão "Este player sou eu" deve aparecer
   const shouldShowClaimButton =
+    player &&
     player.user_id === null &&
     user &&
     user.player_id === null &&
     !claimed;
 
   const handleClaimPlayer = async () => {
-    if (!user) return;
+    if (!user || !player) return;
 
     setClaimLoading(true);
     setClaimError(null);
@@ -64,7 +98,7 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
     }
   };
 
-  return (
+  return player ? (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="card-base w-full max-w-md relative overflow-hidden">
         {/* Close Button */}
@@ -127,16 +161,30 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
               <h3 className="text-sm font-heading font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
                 Títulos
               </h3>
-              <div className="space-y-2">
-                {(mockTitles[player.id] || mockTitles.default).map((title, i) => (
-                  <div
-                    key={i}
-                    className="bg-muted/50 rounded px-3 py-2 text-sm text-foreground"
-                  >
-                    {title}
-                  </div>
-                ))}
-              </div>
+              {titles.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-2">
+                  -
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {titles.map((title, i) => {
+                    const colorClasses = {
+                      1: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
+                      2: 'bg-indigo-500/15 text-indigo-300 border border-indigo-400/40',
+                      3: 'bg-slate-400/20 text-slate-300 border border-slate-400/30',
+                    };
+
+                    return (
+                      <div
+                        key={i}
+                        className={`rounded px-3 py-2 text-sm ${colorClasses[title.position]}`}
+                      >
+                        {title.tournament_name} – {title.title_label}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Vinculação Info */}
@@ -197,5 +245,5 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
         </div>
       </div>
     </div>
-  );
+  ) : null;
 }
