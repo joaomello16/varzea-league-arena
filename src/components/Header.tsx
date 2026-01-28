@@ -198,11 +198,13 @@ export function Header() {
 
               {notificationsOpen && (
                 <div className="
-     absolute right-0 mt-2
-    w-[90vw] sm:w-80
-    max-w-sm
-    max-h-[70vh]
-    card-base shadow-lg z-50
+     fixed md:absolute 
+     right-4 md:right-0 
+     mt-2
+     w-[calc(100vw-2rem)] sm:w-80
+     max-w-sm
+     max-h-[70vh]
+     card-base shadow-lg z-50
     ">
                   <div className="px-4 py-3 border-b border-border">
                     <p className="font-heading font-semibold">Notificações</p>

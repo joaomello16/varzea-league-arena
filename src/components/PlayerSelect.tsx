@@ -23,7 +23,7 @@ export function PlayerSelect({ selectedPlayerId, onSelect, onPlayerNotFound }: P
   return (
     <div className="space-y-2">
       <label htmlFor="player-select" className="block text-sm font-medium text-muted-foreground">
-        Selecionar Player
+        Selecione seu nick 
       </label>
       
       <div className="relative">
@@ -82,17 +82,6 @@ export function PlayerSelect({ selectedPlayerId, onSelect, onPlayerNotFound }: P
                 </button>
               ))}
             </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setIsOpen(false);
-                onPlayerNotFound();
-              }}
-              className="w-full p-2 text-sm text-primary border-t border-border hover:bg-accent transition-colors"
-            >
-              Não encontrei meu player
-            </button>
           </div>
         )}
       </div>
@@ -102,6 +91,22 @@ export function PlayerSelect({ selectedPlayerId, onSelect, onPlayerNotFound }: P
           ✓ {selectedPlayer.nick} selecionado
         </div>
       )}
+
+      <div className="pt-2 space-y-2">
+        <p className="text-sm text-muted-foreground">
+          Não encontrei meu player ou sou jogador novo
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            onSelect(null, '');
+            onPlayerNotFound();
+          }}
+          className="w-full p-2 text-sm text-primary border border-border rounded-md  transition-colors"
+        >
+          Não encontrei meu player
+        </button>
+      </div>
     </div>
   );
 }

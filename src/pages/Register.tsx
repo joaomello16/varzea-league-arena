@@ -83,7 +83,7 @@ export default function Register() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="nick" className="block text-sm font-medium text-muted-foreground mb-2">
-                Nick
+                Nome de Usuario
               </label>
               <input
                 id="nick"
@@ -91,7 +91,7 @@ export default function Register() {
                 value={nick}
                 onChange={(e) => setNick(e.target.value)}
                 className="input-base"
-                placeholder="Nick no Jogo"
+                placeholder="Usuario para o site"
                 required
                 minLength={3}
               />

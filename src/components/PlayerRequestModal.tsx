@@ -9,6 +9,7 @@ interface PlayerRequestModalProps {
 
 export function PlayerRequestModal({ isOpen, onClose, onSuccess }: PlayerRequestModalProps) {
   const [requestedNick, setRequestedNick] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,6 +22,11 @@ export function PlayerRequestModal({ isOpen, onClose, onSuccess }: PlayerRequest
       return;
     }
 
+    if (!whatsapp.trim()) {
+      setError('Digite o número de WhatsApp');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -28,9 +34,9 @@ export function PlayerRequestModal({ isOpen, onClose, onSuccess }: PlayerRequest
         {
           type: 'player_request',
           title: 'Solicitação de novo player',
-          message: `Usuário não encontrou seu player na listagem: ${requestedNick}`,
+          message: `Jogador: '${requestedNick}' Número: '${whatsapp}'`,
           metadata: {
-            requested_nick: requestedNick,
+            requested_nick: `${requestedNick} - WhatsApp: ${whatsapp}`,
           },
         },
       ]);
@@ -38,6 +44,7 @@ export function PlayerRequestModal({ isOpen, onClose, onSuccess }: PlayerRequest
       if (err) throw err;
 
       setRequestedNick('');
+      setWhatsapp('');
       onSuccess();
     } catch (err) {
       console.error('Error creating player request:', err);
@@ -57,7 +64,7 @@ export function PlayerRequestModal({ isOpen, onClose, onSuccess }: PlayerRequest
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="requested-nick" className="block text-sm font-medium text-muted-foreground mb-2">
-              Qual é o nick do seu player?
+              Digite seu nick:
             </label>
             <input
               id="requested-nick"
@@ -71,8 +78,24 @@ export function PlayerRequestModal({ isOpen, onClose, onSuccess }: PlayerRequest
             />
           </div>
 
+          <div>
+            <label htmlFor="whatsapp" className="block text-sm font-medium text-muted-foreground mb-2">
+              Número de WhatsApp:
+            </label>
+            <input
+              id="whatsapp"
+              type="text"
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(e.target.value)}
+              className="input-base w-full"
+              placeholder="(11) 99999-9999"
+              disabled={isSubmitting}
+            />
+          </div>
+
           <p className="text-sm text-muted-foreground">
-            Sua solicitação será enviada para os administradores. Eles verificarão se o player existe no sistema.
+            Sua solicitação será enviada para os administradores. <br /><br />
+            OBS: é possivel criar conta sem ter um player vinculado, voce só nao conseguira editar seu perfil até que um administrador aprove sua solicitação. 
           </p>
 
           {error && (
