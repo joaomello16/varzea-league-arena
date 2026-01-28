@@ -32,13 +32,28 @@ function PlayerCard({
   rank,
   titles = [],
   onEditClick,
+  activeTab,
 }: {
   player: Player;
   rank: number;
   titles?: PlayerTitle[];
   onEditClick?: () => void;
+  activeTab: 'rating' | 'kills' | 'position';
 }) {
   const canEdit = useCanEditPlayer(player);
+
+  // Define qual valor e label mostrar baseado na aba ativa
+  const displayValue = activeTab === 'rating' 
+    ? (player.rating ?? 1000)
+    : activeTab === 'kills'
+    ? (player.total_kills ?? 0)
+    : (player.total_position_points ?? 0);
+  
+  const displayLabel = activeTab === 'rating' 
+    ? 'Rating'
+    : activeTab === 'kills'
+    ? 'Kills'
+    : 'Pontos de Posição';
 
   return (
     <div className="card-base overflow-hidden">
@@ -78,11 +93,11 @@ function PlayerCard({
           {player.nick}
         </h2>
 
-        {/* Rating */}
+        {/* Rating/Kills/Pontos - Dynamic */}
         <div className="flex items-center gap-2 mb-4">
           <Star size={18} className="text-accent" />
           <span className="font-semibold text-foreground">
-            {player.rating ?? 1000} pts
+            {displayValue} {displayLabel}
           </span>
         </div>
 
@@ -94,7 +109,7 @@ function PlayerCard({
         {/* Titles */}
         <div className="w-full mb-6">
           <h3 className="text-sm font-heading font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
-            Títulos
+            Títulos Da temporada
           </h3>
           {titles.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-2">
@@ -147,11 +162,13 @@ function RankingRow({
   rank,
   isSelected,
   onClick,
+  activeTab,
 }: {
   player: Player;
   rank: number;
   isSelected: boolean;
   onClick: () => void;
+  activeTab: 'rating' | 'kills' | 'position';
 }) {
   const isTop3 = rank <= 3;
 
@@ -200,12 +217,19 @@ function RankingRow({
         </p>
       </div>
 
-      {/* Rating */}
+      {/* Value - Dynamic based on active tab */}
       <div className="text-right">
         <p className="font-semibold text-primary">
-          {player.rating ?? 1000}
+          {activeTab === 'rating' 
+            ? (player.rating ?? 1000)
+            : activeTab === 'kills'
+            ? (player.total_kills ?? 0)
+            : (player.total_position_points ?? 0)
+          }
         </p>
-        <p className="text-xs text-muted-foreground">pts</p>
+        <p className="text-xs text-muted-foreground">
+          {activeTab === 'rating' ? 'Rating' : activeTab === 'kills' ? 'Kills' : 'Pontos'}
+        </p>
       </div>
     </button>
   );
@@ -237,10 +261,30 @@ export default function Leaderboard() {
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [selectedPlayerTitles, setSelectedPlayerTitles] = useState<PlayerTitle[]>([]);
+  const [activeTab, setActiveTab] = useState<'rating' | 'kills' | 'position'>('rating');
+  const [seasonInfo, setSeasonInfo] = useState<{ name: string; endDate: string | null } | null>(null);
   const pageSize = 10;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
   const totalPages = Math.ceil(totalCount / pageSize);
+
+  const handleTabChange = (tab: 'rating' | 'kills' | 'position') => {
+    setActiveTab(tab);
+    setPage(1);
+  };
+
+  // Calcular dias restantes da temporada
+  const daysRemaining = seasonInfo?.endDate 
+    ? Math.ceil((new Date(seasonInfo.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  // Fechar menu mobile quando abrir o modal
+  useEffect(() => {
+    if (isMobileModalOpen) {
+      // Dispatch evento customizado para fechar o menu mobile
+      window.dispatchEvent(new CustomEvent('closeAllMenus'));
+    }
+  }, [isMobileModalOpen]);
 
   useEffect(() => {
     async function fetchPlayers() {
@@ -248,7 +292,7 @@ export default function Leaderboard() {
         // 1. Buscar temporada ativa
         const { data: seasonData, error: seasonError } = await supabase
           .from('seasons')
-          .select('id')
+          .select('id, name, end_date')
           .eq('active', true)
           .limit(1)
           .single();
@@ -261,28 +305,42 @@ export default function Leaderboard() {
         }
 
         const seasonId = seasonData?.id;
+        
+        // Guardar informações da temporada
+        if (seasonData) {
+          setSeasonInfo({
+            name: seasonData.name,
+            endDate: seasonData.end_date,
+          });
+        }
 
-        // 2. Buscar leaderboard da temporada ativa com paginação
+        // 2. Buscar leaderboard da temporada ativa com paginação (limitado aos 20 melhores)
         const leaderboardMap = new Map<string, LeaderboardEntry>();
         let leaderboardPlayerIds: string[] = [];
         if (seasonId) {
-          const { data: leaderboardData, error: leaderboardError, count } = await supabase
+          // Define qual coluna ordenar baseado na aba ativa
+          const orderColumn = activeTab === 'rating' ? 'rating' : activeTab === 'kills' ? 'total_kills' : 'total_position_points';
+          
+          const { data: leaderboardData, error: leaderboardError } = await supabase
             .from('leaderboard_by_season')
-            .select('*', { count: 'exact' })
+            .select('*')
             .eq('season_id', seasonId)
-            .order('rating', { ascending: false })
-            .range(from, to);
+            .order(orderColumn, { ascending: false })
+            .limit(20);
 
           if (leaderboardError) {
             console.warn('Erro ao buscar leaderboard:', leaderboardError);
           } else {
-            setTotalCount(count || 0);
-            if (leaderboardData) {
-              leaderboardData.forEach((entry: LeaderboardEntry) => {
-                leaderboardMap.set(entry.player_id, entry);
-                leaderboardPlayerIds.push(entry.player_id);
-              });
-            }
+            // Define total como 20 no máximo
+            const allEntries = leaderboardData || [];
+            setTotalCount(Math.min(allEntries.length, 20));
+            
+            // Aplica paginação manualmente nos 20 resultados
+            const paginatedEntries = allEntries.slice(from, to + 1);
+            paginatedEntries.forEach((entry: LeaderboardEntry) => {
+              leaderboardMap.set(entry.player_id, entry);
+              leaderboardPlayerIds.push(entry.player_id);
+            });
           }
         }
 
@@ -305,6 +363,8 @@ export default function Leaderboard() {
             return {
               ...player,
               rating: leaderboardEntry?.rating ?? 0,
+              total_kills: leaderboardEntry?.total_kills ?? 0,
+              total_position_points: leaderboardEntry?.total_position_points ?? 0,
             };
           })
           // 5. Manter ordem do leaderboard
@@ -327,7 +387,7 @@ export default function Leaderboard() {
     }
 
     fetchPlayers();
-  }, [page]);
+  }, [page, activeTab]);
 
   // Fetch titles quando selectedPlayer mudar
   useEffect(() => {
@@ -388,9 +448,88 @@ export default function Leaderboard() {
   return (
     <Layout>
       <div className="container-main py-8">
-        <h1 className="text-3xl md:text-4xl font-heading font-bold text-neon-blue mb-8">
-          Leaderboard
-        </h1>
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-heading font-bold text-neon-blue mb-2">
+            Placar De Líderes
+          </h1>
+          <p className="text-muted-foreground text-sm md:text-base">
+            Acompanhe os 20 melhores jogadores da temporada e veja quem domina a Varzea League
+          </p>
+        </div>
+
+        {/* Season Info */}
+        {seasonInfo && (
+          <div className="card-base p-4 mb-8 bg-gradient-to-r from-primary/10 to-transparent border-l-4 border-primary">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h3 className="font-heading font-bold text-lg text-neon-blue mb-1">
+                  {seasonInfo.name}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Temporada atual em andamento
+                </p>
+              </div>
+              {daysRemaining !== null && daysRemaining > 0 && (
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                      Tempo restante
+                    </p>
+                    <p className="font-heading font-bold text-2xl text-neon-blue">
+                      {daysRemaining}
+                    </p>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-foreground">
+                      {daysRemaining === 1 ? 'dia' : 'dias'}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {daysRemaining !== null && daysRemaining <= 0 && (
+                <div className="px-4 py-2 bg-destructive/20 border border-destructive/30 rounded-lg">
+                  <p className="text-sm font-semibold text-destructive">
+                    Temporada Encerrada
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="flex gap-2 mb-8 border-b border-border">
+          <button
+            onClick={() => handleTabChange('rating')}
+            className={`px-6 py-3 font-heading font-bold text-lg transition-all ${
+              activeTab === 'rating'
+                ? 'text-neon-blue border-b-2 border-neon-blue'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            RATING
+          </button>
+          <button
+            onClick={() => handleTabChange('kills')}
+            className={`px-6 py-3 font-heading font-bold text-lg transition-all ${
+              activeTab === 'kills'
+                ? 'text-neon-blue border-b-2 border-neon-blue'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            KILLS
+          </button>
+          <button
+            onClick={() => handleTabChange('position')}
+            className={`px-6 py-3 font-heading font-bold text-lg transition-all ${
+              activeTab === 'position'
+                ? 'text-neon-blue border-b-2 border-neon-blue'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            PONTOS DE POSIÇÃO
+          </button>
+        </div>
 
         {error && (
           <div className="card-base p-4 border-destructive/50 bg-destructive/10 mb-6">
@@ -406,7 +545,9 @@ export default function Leaderboard() {
             ) : selectedPlayer ? (
               <PlayerCard
                 player={selectedPlayer}
-                rank={players.findIndex((p) => p.id === selectedPlayer.id) + (page - 1) * pageSize + 1}                titles={selectedPlayerTitles}                onEditClick={() => setIsEditModalOpen(true)}
+                rank={players.findIndex((p) => p.id === selectedPlayer.id) + (page - 1) * pageSize + 1}                titles={selectedPlayerTitles}
+                activeTab={activeTab}
+                onEditClick={() => setIsEditModalOpen(true)}
               />
             ) : null}
           </div>
@@ -432,6 +573,7 @@ export default function Leaderboard() {
                     player={player}
                     rank={(page - 1) * pageSize + index + 1}
                     isSelected={selectedPlayer?.id === player.id}
+                    activeTab={activeTab}
                     onClick={() => {
                       setSelectedPlayer(player);
                       setIsMobileModalOpen(true);
@@ -503,7 +645,7 @@ export default function Leaderboard() {
         {/* Mobile Player Modal */}
         {isMobileModalOpen && selectedPlayer && (
           <div 
-            className="lg:hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4"
+            className="lg:hidden fixed inset-0 z-[999] bg-black/70 flex items-center justify-center px-4"
             onClick={() => setIsMobileModalOpen(false)}
           >
             <div 
@@ -522,6 +664,7 @@ export default function Leaderboard() {
                 player={selectedPlayer}
                 rank={players.findIndex((p) => p.id === selectedPlayer.id) + (page - 1) * pageSize + 1}
                 titles={selectedPlayerTitles}
+                activeTab={activeTab}
                 onEditClick={() => {
                   setIsMobileModalOpen(false);
                   setIsEditModalOpen(true);
@@ -539,6 +682,38 @@ export default function Leaderboard() {
             onSaveSuccess={handlePlayerUpdate}
           />
         )}
+
+        {/* Card de Explicação do Rating */}
+        <div className="card-base p-6 mt-12 border border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+              <Trophy size={24} className="text-white" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-heading font-bold text-neon-blue mb-3">
+                Como é Calculado o Rating?
+              </h2>
+              <p className="text-muted-foreground leading-relaxed mb-3">
+                O rating é calculado pela <span className="text-foreground font-semibold">soma dos pontos por posição + kills individuais</span> de todos os campeonatos que o player participou.
+              </p>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start gap-2">
+                  <span className="text-yellow-500 font-bold mt-0.5">•</span>
+                  <p className="text-muted-foreground">
+                    <span className="text-foreground font-semibold">Edição Varzea League:</span> Pontos por posição com multiplicador <span className="text-cyan-400 font-bold">1x</span>
+                  </p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-yellow-500 font-bold mt-0.5">•</span>
+                  <p className="text-muted-foreground">
+                    <span className="text-foreground font-semibold">Campeonato Varzea League:</span> Pontos por posição com multiplicador <span className="text-cyan-400 font-bold">1,5x</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </Layout>
   );

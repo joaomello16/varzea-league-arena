@@ -25,6 +25,8 @@ export interface Player {
   created_at: string;
   user_id: string | null;
   rating?: number;
+  total_kills?: number;
+  total_position_points?: number;
 }
 
 export interface PlayerClaim {

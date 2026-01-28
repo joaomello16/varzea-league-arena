@@ -119,6 +119,18 @@ export function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Listener para fechar menus quando modais forem abertos
+  useEffect(() => {
+    function handleCloseMenus() {
+      setMobileMenuOpen(false);
+      setProfileDropdownOpen(false);
+      setNotificationsOpen(false);
+    }
+
+    window.addEventListener('closeAllMenus', handleCloseMenus);
+    return () => window.removeEventListener('closeAllMenus', handleCloseMenus);
+  }, []);
+
   const isActive = (path: string) => location.pathname === path;
 
   const navItems = [
