@@ -311,7 +311,7 @@ function TournamentDetailModal({
           {tournamentInfo.vod_url && (
             <div className="p-4 bg-muted/50 rounded-lg border border-border">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">Link da VOD:</p>
+                <p className="text-sm text-muted-foreground">VOD da Live:</p>
                 <a
                   href={tournamentInfo.vod_url}
                   target="_blank"
