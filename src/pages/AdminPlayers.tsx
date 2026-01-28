@@ -46,7 +46,7 @@ function PlayerTableRow({
                 </div>
               )}
             </div>
-            <span className="font-heading font-semibold text-foreground">
+            <span className="font-semibold text-foreground">
               {player.nick}
             </span>
           </div>

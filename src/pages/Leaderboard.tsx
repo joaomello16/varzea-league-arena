@@ -74,14 +74,14 @@ function PlayerCard({
         </div>
 
         {/* Nick */}
-        <h2 className="text-2xl font-heading font-bold text-neon-blue mb-2">
+        <h2 className="text-2xl font-bold text-neon-blue mb-2">
           {player.nick}
         </h2>
 
         {/* Rating */}
         <div className="flex items-center gap-2 mb-4">
           <Star size={18} className="text-accent" />
-          <span className="font-heading font-semibold text-foreground">
+          <span className="font-semibold text-foreground">
             {player.rating ?? 1000} pts
           </span>
         </div>
@@ -193,7 +193,7 @@ function RankingRow({
       {/* Info */}
       <div className="flex-1 text-left">
         <p
-          className={`font-heading font-semibold ${rank === 1 ? 'text-neon-yellow' : 'text-foreground'
+          className={`font-semibold ${rank === 1 ? 'text-neon-yellow' : 'text-foreground'
             }`}
         >
           {player.nick}
@@ -202,7 +202,7 @@ function RankingRow({
 
       {/* Rating */}
       <div className="text-right">
-        <p className="font-heading font-semibold text-primary">
+        <p className="font-semibold text-primary">
           {player.rating ?? 1000}
         </p>
         <p className="text-xs text-muted-foreground">pts</p>

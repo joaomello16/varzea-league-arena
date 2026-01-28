@@ -15,7 +15,7 @@ export default function Login() {
   }
 
   if (session) {
-    return <Navigate to="/leaderboard" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

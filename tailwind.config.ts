@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        heading: ['Rajdhani', 'sans-serif'],
+        heading: ['Bebas Neue', 'sans-serif'],
         body: ['Roboto', 'sans-serif'],
       },
       colors: {

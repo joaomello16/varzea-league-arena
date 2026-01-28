@@ -122,6 +122,7 @@ export function Header() {
   const isActive = (path: string) => location.pathname === path;
 
   const navItems = [
+    { path: '/dashboard', label: 'Início' },
     { path: '/leaderboard', label: 'Leaderboard' },
     { path: '/campeonatos', label: 'Campeonatos' },
     { path: '/players', label: 'Players' },
@@ -145,7 +146,7 @@ export function Header() {
 
           {/* Logo */}
           <Link
-            to="/leaderboard"
+            to="/dashboard"
             className="
     absolute left-1/2 -translate-x-1/2
     md:static md:translate-x-0
