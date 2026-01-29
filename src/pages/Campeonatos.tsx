@@ -158,6 +158,11 @@ function TournamentDetailModal({
   const [podiumPlayers, setPodiumPlayers] = useState<TournamentPodiumPlayer[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Fechar menus do header ao abrir modal
+  useEffect(() => {
+    window.dispatchEvent(new Event('closeAllMenus'));
+  }, []);
+
   useEffect(() => {
     const fetchTournamentData = async () => {
       try {
@@ -196,7 +201,7 @@ function TournamentDetailModal({
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
         <div className="card-base p-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-blue"></div>
         </div>
@@ -222,7 +227,7 @@ function TournamentDetailModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4"
       onClick={onClose}
     >
       <div
@@ -388,9 +393,14 @@ export default function Campeonatos() {
   return (
     <Layout>
       <div className="container-main py-8">
-        <h1 className="text-3xl md:text-4xl font-heading font-bold text-neon-blue mb-8">
-          Campeonatos
-        </h1>
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-heading font-bold text-neon-blue">
+            Campeonatos
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm md:text-base">
+            Acompanhe todos os campeonatos, resultados e MVPs da Verzea League.
+          </p>
+        </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-12">

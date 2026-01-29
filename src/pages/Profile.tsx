@@ -11,6 +11,11 @@ export default function Profile() {
   const [player, setPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [seasonStats, setSeasonStats] = useState<{
+    rating: number;
+    total_kills: number;
+    total_position_points: number;
+  } | null>(null);
   const canEditPlayer = useCanEditPlayer(player);
 
   useEffect(() => {
@@ -27,6 +32,49 @@ export default function Profile() {
       };
       fetchPlayer();
     }
+  }, [user?.player_id]);
+
+  // Fetch season stats
+  useEffect(() => {
+    async function fetchSeasonStats() {
+      if (!user?.player_id) {
+        setSeasonStats(null);
+        return;
+      }
+
+      try {
+        // Buscar temporada ativa
+        const { data: seasonData } = await supabase
+          .from('seasons')
+          .select('id')
+          .eq('active', true)
+          .single();
+
+        if (!seasonData) {
+          setSeasonStats(null);
+          return;
+        }
+
+        // Buscar stats do player na temporada ativa
+        const { data: statsData } = await supabase
+          .from('leaderboard_by_season')
+          .select('rating, total_kills, total_position_points')
+          .eq('player_id', user.player_id)
+          .eq('season_id', seasonData.id)
+          .single();
+
+        if (statsData) {
+          setSeasonStats(statsData);
+        } else {
+          setSeasonStats(null);
+        }
+      } catch (err) {
+        console.warn('Erro ao buscar estatísticas:', err);
+        setSeasonStats(null);
+      }
+    }
+
+    fetchSeasonStats();
   }, [user?.player_id]);
 
   const formatDate = (dateString: string) => {
@@ -88,6 +136,37 @@ export default function Profile() {
                 </p>
               )}
             </div>
+
+            {/* Season Stats */}
+            {player && (
+              <div className="mb-8">
+                <h3 className="text-lg font-heading font-bold text-foreground mb-4 text-center">
+                  Estatísticas da Temporada
+                </h3>
+                <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-neon-blue">
+                      {seasonStats?.rating ?? 0}
+                    </div>
+                    <div className="text-sm text-gray-400">Rating</div>
+                  </div>
+
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-green-400">
+                      {seasonStats?.total_kills ?? 0}
+                    </div>
+                    <div className="text-sm text-gray-400">Kills</div>
+                  </div>
+
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-purple-400">
+                      {seasonStats?.total_position_points ?? 0}
+                    </div>
+                    <div className="text-sm text-gray-400">Pontos Pos.</div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Info */}
             <div className="space-y-4">

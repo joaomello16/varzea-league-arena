@@ -29,6 +29,11 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
   const [claimError, setClaimError] = useState<string | null>(null);
   const [claimed, setClaimed] = useState(false);
   const [titles, setTitles] = useState<PlayerTitle[]>([]);
+  const [seasonStats, setSeasonStats] = useState<{
+    rating: number;
+    total_kills: number;
+    total_position_points: number;
+  } | null>(null);
 
   // Fetch titles quando o player mudar
   useEffect(() => {
@@ -58,6 +63,49 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
     }
 
     fetchTitles();
+  }, [player?.id]);
+
+  // Fetch season stats
+  useEffect(() => {
+    async function fetchSeasonStats() {
+      if (!player) {
+        setSeasonStats(null);
+        return;
+      }
+
+      try {
+        // Buscar temporada ativa
+        const { data: seasonData } = await supabase
+          .from('seasons')
+          .select('id')
+          .eq('active', true)
+          .single();
+
+        if (!seasonData) {
+          setSeasonStats(null);
+          return;
+        }
+
+        // Buscar stats do player na temporada ativa
+        const { data: statsData } = await supabase
+          .from('leaderboard_by_season')
+          .select('rating, total_kills, total_position_points')
+          .eq('player_id', player.id)
+          .eq('season_id', seasonData.id)
+          .single();
+
+        if (statsData) {
+          setSeasonStats(statsData);
+        } else {
+          setSeasonStats(null);
+        }
+      } catch (err) {
+        console.warn('Erro ao buscar estatísticas:', err);
+        setSeasonStats(null);
+      }
+    }
+
+    fetchSeasonStats();
   }, [player?.id]);
 
   // Verificar se é meu próprio player
@@ -145,8 +193,32 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
             <div className="flex items-center gap-2 mb-4">
               <Star size={18} className="text-accent" />
               <span className="font-heading font-semibold text-foreground">
-                {player.rating ?? 1000} pts
+                {seasonStats?.rating ?? player.rating ?? 0} pts
               </span>
+            </div>
+
+            {/* Season Stats */}
+            <div className="grid grid-cols-3 gap-4 w-full mb-4 p-4 bg-muted/50 rounded-lg">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-neon-blue">
+                  {seasonStats?.rating ?? 0}
+                </div>
+                <div className="text-xs text-gray-400">Rating</div>
+              </div>
+
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-400">
+                  {seasonStats?.total_kills ?? 0}
+                </div>
+                <div className="text-xs text-gray-400">Kills</div>
+              </div>
+
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-400">
+                  {seasonStats?.total_position_points ?? 0}
+                </div>
+                <div className="text-xs text-gray-400">Pontos Pos.</div>
+              </div>
             </div>
 
             {/* Bio */}

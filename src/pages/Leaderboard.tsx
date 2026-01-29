@@ -453,7 +453,7 @@ export default function Leaderboard() {
             Placar De Líderes
           </h1>
           <p className="text-muted-foreground text-sm md:text-base">
-            Acompanhe os 20 melhores jogadores da temporada e veja quem domina a Varzea League
+            Acompanhe os 20 melhores jogadores da temporada e veja quem domina a Varzea League.
           </p>
         </div>
 
@@ -694,7 +694,7 @@ export default function Leaderboard() {
                 Como é Calculado o Rating?
               </h2>
               <p className="text-muted-foreground leading-relaxed mb-3">
-                O rating é calculado pela <span className="text-foreground font-semibold">soma dos pontos por posição + kills individuais</span> de todos os campeonatos que o player participou.
+                O rating é calculado pela <span className="text-foreground font-semibold">soma dos pontos por posição + kills individuais</span> de todos os campeonatos que o player participou na temporada.
               </p>
               <div className="space-y-2 text-sm">
                 <div className="flex items-start gap-2">

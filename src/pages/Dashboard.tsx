@@ -33,10 +33,10 @@ export default function Dashboard() {
   ];
 
   return (
-    <Layout>
-      <div className="space-y-0 -mt-6">
+    <Layout showCharacters={false}>
+      <div className="space-y-0">
         {/* Hero Banner Section */}
-        <div className="relative w-full -mx-4 sm:-mx-6 lg:-mx-8 mb-12">
+        <div className="relative w-full mb-12">
           <div className="relative h-[300px] md:h-[400px] overflow-hidden">
             {/* Banner Image */}
             <img
@@ -65,7 +65,7 @@ export default function Dashboard() {
         </div>
 
         {/* Main Navigation Cards */}
-        <div className="px-4 sm:px-6 lg:px-8">
+        <div className="container-main">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
             {cards.map((card) => {
               const Icon = card.icon;

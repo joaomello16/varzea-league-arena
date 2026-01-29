@@ -196,14 +196,19 @@ const { data, error, count } = await query.range(
   return (
     <Layout>
       <div className="container-main py-8">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl md:text-4xl font-heading font-bold text-neon-purple">
-            Gerenciar Players
-          </h1>
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-heading font-bold text-neon-purple">
+              Visualizar Perfil Dos Players
+            </h1>
+            <p className="text-muted-foreground mt-2 text-sm md:text-base">
+              Pesquise por qualquer player da Verzea League para ver as estatísticas gerais dele.
+            </p>
+          </div>
           {isAdmin && (
             <button
               onClick={() => setShowForm(!showForm)}
-              className="btn-primary flex items-center gap-2"
+              className="btn-primary flex items-center gap-2 flex-shrink-0"
             >
               <Plus size={20} />
               <span className="hidden sm:inline">Novo Player</span>
