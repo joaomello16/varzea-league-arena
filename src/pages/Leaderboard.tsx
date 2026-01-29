@@ -44,6 +44,9 @@ function PlayerCard({
 }) {
   const canEdit = useCanEditPlayer(player);
 
+  // Verifica se o nick contém números
+  const hasNumbers = /\d/.test(player.nick);
+
   // Define qual valor e label mostrar baseado na aba ativa
   const displayValue = activeTab === 'rating' 
     ? (player.rating ?? 1000)
@@ -91,7 +94,7 @@ function PlayerCard({
         </div>
 
         {/* Nick */}
-        <h2 className="text-2xl font-bold text-neon-blue mb-2">
+        <h2 className="text-2xl font-bold text-neon-blue mb-2" style={hasNumbers ? {} : { fontFamily: 'Anaphora', fontVariantLigatures: 'none', fontFeatureSettings: 'normal' }}>
           {player.nick}
         </h2>
 
@@ -173,6 +176,9 @@ function RankingRow({
   activeTab: 'rating' | 'kills' | 'position';
 }) {
   const isTop3 = rank <= 3;
+  
+  // Verifica se o nick contém números
+  const hasNumbers = /\d/.test(player.nick);
 
   return (
     <button
@@ -236,6 +242,7 @@ function RankingRow({
         <p
           className={`font-semibold ${rank === 1 ? 'text-neon-yellow' : 'text-foreground'
             }`}
+          style={hasNumbers ? {} : { fontFamily: 'Anaphora', fontVariantLigatures: 'none', fontFeatureSettings: 'normal' }}
         >
           {player.nick}
         </p>
