@@ -177,10 +177,12 @@ function RankingRow({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-4 p-4 rounded-lg transition-all bg-gradient-to-l from-blue-950/25 via-black via-25% to-black border border-slate-700/40 shadow-[0_2px_8px_rgba(168,85,247,0.2)] ${isSelected
-          ? 'border-primary/50 shadow-[0_0_20px_rgba(168,85,247,0.3)]'
-          : 'hover:border-primary/30 hover:shadow-[0_4px_20px_rgba(0,0,0,0.5)]'
-        } ${rank === 1 ? 'border-yellow-500/30' : ''}`}
+      className={`w-full flex items-center gap-4 p-4 rounded-lg transition-all bg-gradient-to-l from-blue-950/25 via-black via-25% to-black border ${rank === 1
+          ? 'border-yellow-500/40'
+          : isSelected
+          ? 'border-slate-600/60'
+          : 'border-slate-700/40 hover:border-slate-600/50'
+        }`}
     >
       {/* Rank with Diamond Shape */}
       <div className="relative flex items-center justify-center w-14 h-14">
@@ -241,7 +243,7 @@ function RankingRow({
 
       {/* Value - Dynamic based on active tab */}
       <div className="text-right">
-        <p className="font-semibold text-primary">
+        <p className={`font-semibold text-primary ${rank === 1 ? '[text-shadow:0_2px_8px_rgba(234,179,8,0.6)]' : ''}`}>
           {activeTab === 'rating' 
             ? (player.rating ?? 1000)
             : activeTab === 'kills'
@@ -469,7 +471,7 @@ export default function Leaderboard() {
 
   return (
     <Layout>
-      <div className="container-main py-8 bg-gradient-to-r from-blue-900/20 via-black to-blue-900/20 min-h-screen">
+      <div className="container-main py-8 bg-black to-98% min-h-screen">
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-heading font-bold text-neon-blue mb-2">
             Placar De Líderes
