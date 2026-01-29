@@ -2,8 +2,18 @@ import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { supabase } from '@/lib/supabase';
 import { Trophy, X, Play, ExternalLink } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Tipos para as views do Supabase
+interface Season {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string | null;
+  active: boolean;
+  created_at: string;
+}
+
 interface TournamentWinner {
   player_id: string;
   nick: string;
@@ -17,7 +27,8 @@ interface TournamentListItem {
   finished: boolean;
   created_at: string;
   tournament_type: string;
-  season_id?: string;
+  season_id: string;
+  season_name: string;
   mvp_player_id?: string;
   mvp_nick: string | null;
   mvp_avatar_url: string | null;
@@ -29,6 +40,8 @@ interface TournamentDetailRow {
   name: string;
   edition: number;
   tournament_type: string;
+  season_id: string;
+  season_name: string;
   finished: boolean;
   created_at: string;
   vod_url: string | null;
@@ -55,6 +68,8 @@ interface TournamentForDisplay {
   type: string;
   winners: TournamentWinner[];
   mvp: { nick: string | null; avatar_url: string | null };
+  season_id: string;
+  season_name: string;
 }
 
 // Avatar com fallback
@@ -168,15 +183,25 @@ function TournamentDetailModal({
       try {
         setLoading(true);
 
-        // Fetch tournament metadata
-        const { data: infoData } = await supabase
-          .from('tournament_details')
+        // Fetch tournament metadata from tournaments_list
+        const { data: listData } = await supabase
+          .from('tournaments_list')
           .select('*')
           .eq('tournament_id', tournamentId)
           .single();
 
-        if (infoData) {
-          setTournamentInfo(infoData);
+        // Fetch vod_url from tournaments table
+        const { data: tournamentData } = await supabase
+          .from('tournaments')
+          .select('vod_url')
+          .eq('id', tournamentId)
+          .single();
+
+        if (listData) {
+          setTournamentInfo({
+            ...listData,
+            vod_url: tournamentData?.vod_url || null,
+          });
         }
 
         // Fetch podium players
@@ -254,8 +279,8 @@ function TournamentDetailModal({
           {/* Tournament Info */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Tipo</p>
-              <p className="text-sm font-semibold text-foreground capitalize">{tournamentInfo.tournament_type}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Temporada</p>
+              <p className="text-sm font-semibold text-foreground">{tournamentInfo.season_name}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Status</p>
@@ -337,13 +362,30 @@ function TournamentDetailModal({
 
 export default function Campeonatos() {
   const [tournaments, setTournaments] = useState<TournamentForDisplay[]>([]);
+  const [allTournaments, setAllTournaments] = useState<TournamentForDisplay[]>([]);
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string>('all');
   const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchTournaments = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
+        
+        // Fetch seasons
+        const { data: seasonsData, error: seasonsError } = await supabase
+          .from('seasons')
+          .select('*')
+          .order('start_date', { ascending: false });
+
+        if (seasonsError) {
+          console.warn('Error fetching seasons:', seasonsError);
+        } else if (seasonsData) {
+          setSeasons(seasonsData);
+        }
+
+        // Fetch tournaments
         const { data, error } = await supabase
           .from('tournaments_list')
           .select('*')
@@ -375,20 +417,33 @@ export default function Campeonatos() {
                 nick: tournament.mvp_nick,
                 avatar_url: tournament.mvp_avatar_url,
               },
+              season_id: tournament.season_id,
+              season_name: tournament.season_name,
             };
           });
 
+          setAllTournaments(formattedTournaments);
           setTournaments(formattedTournaments);
         }
       } catch (error) {
-        console.warn('Error fetching tournaments:', error);
+        console.warn('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTournaments();
+    fetchData();
   }, []);
+
+  // Filter tournaments when season selection changes
+  useEffect(() => {
+    if (selectedSeasonId === 'all') {
+      setTournaments(allTournaments);
+    } else {
+      const filtered = allTournaments.filter(t => t.season_id === selectedSeasonId);
+      setTournaments(filtered);
+    }
+  }, [selectedSeasonId, allTournaments]);
 
   return (
     <Layout>
@@ -400,6 +455,26 @@ export default function Campeonatos() {
           <p className="text-muted-foreground mt-2 text-sm md:text-base">
             Acompanhe todos os campeonatos, resultados e MVPs da Verzea League.
           </p>
+        </div>
+
+        {/* Season Filter */}
+        <div className="mb-6 flex items-center gap-3">
+          <label className="text-sm font-medium text-muted-foreground">
+            Filtrar por Temporada:
+          </label>
+          <Select value={selectedSeasonId} onValueChange={setSelectedSeasonId}>
+            <SelectTrigger className="w-[250px]">
+              <SelectValue placeholder="Selecione uma temporada" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as Temporadas</SelectItem>
+              {seasons.map((season) => (
+                <SelectItem key={season.id} value={season.id}>
+                  {season.name} {season.active && '(Ativa)'}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {loading ? (

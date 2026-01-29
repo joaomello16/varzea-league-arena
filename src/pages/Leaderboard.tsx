@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { supabase, Player } from '@/lib/supabase';
 import { Trophy, Star, User, Edit2 } from 'lucide-react';
+import { GiLaurelCrown, GiCrownedSkull, GiImperialCrown } from 'react-icons/gi';
+import { IoTrophySharp } from 'react-icons/io5';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCanEditPlayer } from '@/hooks/use-can-edit-player';
 import { PlayerEditModal } from '@/components/PlayerEditModal';
@@ -56,7 +58,7 @@ function PlayerCard({
     : 'Pontos de Posição';
 
   return (
-    <div className="card-base overflow-hidden">
+    <div className="card-base overflow-hidden bg-gradient-to-br from-slate-900/95 via-slate-800/90 to-slate-900/95 shadow-[0_8px_32px_rgba(0,0,0,0.6)] border-slate-700/40">
       {/* Cover */}
       {player.cover_url && (
         <img
@@ -84,7 +86,7 @@ function PlayerCard({
 
         {/* Rank Badge */}
         <div className="flex items-center gap-2 mb-2">
-          {rank === 1 && <Trophy size={20} className="text-accent" />}
+          {rank === 1 && <Trophy size={24} className="text-accent" />}
           <span className="text-muted-foreground font-heading">#{rank}</span>
         </div>
 
@@ -175,23 +177,33 @@ function RankingRow({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-4 p-4 rounded-lg transition-all ${isSelected
-          ? 'card-highlight animate-pulse-glow'
-          : 'card-interactive hover:border-primary/30'
-        } ${rank === 1 ? 'border-accent/50' : ''}`}
+      className={`w-full flex items-center gap-4 p-4 rounded-lg transition-all bg-gradient-to-r from-slate-900/90 via-slate-800/80 to-slate-900/90 border border-slate-700/40 shadow-[0_4px_16px_rgba(0,0,0,0.4)] ${isSelected
+          ? 'border-primary/50 shadow-[0_0_20px_rgba(168,85,247,0.3)]'
+          : 'hover:border-primary/30 hover:shadow-[0_4px_20px_rgba(0,0,0,0.5)]'
+        } ${rank === 1 ? 'border-yellow-500/30' : ''}`}
     >
-      {/* Rank */}
-      <div
-        className={`w-10 h-10 rounded-full flex items-center justify-center font-heading font-bold ${rank === 1
-            ? 'bg-accent text-accent-foreground'
-            : rank === 2
-              ? 'bg-muted-foreground/30 text-foreground'
-              : rank === 3
-                ? 'bg-orange-700/30 text-orange-400'
-                : 'bg-muted text-muted-foreground'
-          }`}
-      >
-        {isTop3 ? <Trophy size={18} /> : rank}
+      {/* Rank with Diamond Shape */}
+      <div className="relative flex items-center justify-center w-14 h-14">
+        {/* Diamond/Losango Background */}
+        <div
+          className={`absolute w-12 h-12 rotate-45 ${rank === 1
+              ? 'bg-gradient-to-br from-yellow-500/30 to-yellow-600/20 border-2 border-yellow-500/40'
+              : rank === 2
+                ? 'bg-gradient-to-br from-cyan-400/25 to-cyan-500/15 border-2 border-cyan-400/30'
+                : rank === 3
+                  ? 'bg-gradient-to-br from-slate-400/25 to-slate-500/15 border-2 border-slate-400/30'
+                  : 'bg-gradient-to-br from-slate-700/30 to-slate-800/20 border-2 border-slate-600/30'
+            } shadow-lg`}
+        ></div>
+        {/* Icon or Number */}
+        <div className="relative z-10 flex items-center justify-center">
+          {rank === 1 && activeTab === 'rating' && <GiImperialCrown size={24} className="text-yellow-400 drop-shadow-[0_2px_8px_rgba(250,204,21,0.8)]" />}
+          {rank === 1 && activeTab === 'kills' && <GiCrownedSkull size={24} className="text-yellow-400 drop-shadow-[0_2px_8px_rgba(250,204,21,0.8)]" />}
+          {rank === 1 && activeTab === 'position' && <GiLaurelCrown size={24} className="text-yellow-400 drop-shadow-[0_2px_8px_rgba(250,204,21,0.8)]" />}
+          {rank === 2 && <IoTrophySharp size={22} className="text-cyan-200 drop-shadow-[0_2px_8px_rgba(165,243,252,0.8)]" />}
+          {rank === 3 && <IoTrophySharp size={22} className="text-slate-300 drop-shadow-[0_2px_8px_rgba(203,213,225,0.8)]" />}
+          {rank > 3 && <span className="font-heading font-bold text-muted-foreground">{rank}</span>}
+        </div>
       </div>
 
       {/* Avatar */}
@@ -447,7 +459,7 @@ export default function Leaderboard() {
 
   return (
     <Layout>
-      <div className="container-main py-8">
+      <div className="container-main py-8 bg-slate-950/50 min-h-screen">
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-heading font-bold text-neon-blue mb-2">
             Placar De Líderes
