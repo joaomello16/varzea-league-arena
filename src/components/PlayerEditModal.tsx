@@ -220,7 +220,7 @@ export function PlayerEditModal({
         </button>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 bg-gradient-to-tl from-blue-950/30 via-black via-25% to-black">
           <form onSubmit={handleSubmit} className="flex flex-col items-center text-center">
             {/* Messages */}
             {error && (

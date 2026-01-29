@@ -58,7 +58,7 @@ function PlayerCard({
     : 'Pontos de Posição';
 
   return (
-    <div className="card-base overflow-hidden bg-gradient-to-br from-slate-900/95 via-slate-800/90 to-slate-900/95 shadow-[0_8px_32px_rgba(0,0,0,0.6)] border-slate-700/40">
+    <div className="card-base overflow-hidden bg-gradient-to-br from-blue-900/35 via-black via-30% to-black shadow-[0_8px_32px_rgba(0,0,0,0.6)] border-slate-700/40">
       {/* Cover */}
       {player.cover_url && (
         <img
@@ -177,7 +177,7 @@ function RankingRow({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-4 p-4 rounded-lg transition-all bg-gradient-to-r from-slate-900/90 via-slate-800/80 to-slate-900/90 border border-slate-700/40 shadow-[0_4px_16px_rgba(0,0,0,0.4)] ${isSelected
+      className={`w-full flex items-center gap-4 p-4 rounded-lg transition-all bg-gradient-to-l from-blue-950/25 via-black via-25% to-black border border-slate-700/40 shadow-[0_2px_8px_rgba(168,85,247,0.2)] ${isSelected
           ? 'border-primary/50 shadow-[0_0_20px_rgba(168,85,247,0.3)]'
           : 'hover:border-primary/30 hover:shadow-[0_4px_20px_rgba(0,0,0,0.5)]'
         } ${rank === 1 ? 'border-yellow-500/30' : ''}`}
@@ -186,22 +186,32 @@ function RankingRow({
       <div className="relative flex items-center justify-center w-14 h-14">
         {/* Diamond/Losango Background */}
         <div
-          className={`absolute w-12 h-12 rotate-45 ${rank === 1
-              ? 'bg-gradient-to-br from-yellow-500/30 to-yellow-600/20 border-2 border-yellow-500/40'
+          className={`absolute w-9 h-9 rotate-45 ${rank === 1
+              ? 'bg-gradient-to-br from-yellow-500/30 to-yellow-600/20 border-2 border-yellow-500/40 shadow-[0_4px_12px_rgba(234,179,8,0.4)]'
               : rank === 2
-                ? 'bg-gradient-to-br from-cyan-400/25 to-cyan-500/15 border-2 border-cyan-400/30'
+                ? 'bg-gradient-to-br from-cyan-400/25 to-cyan-500/15 border-2 border-cyan-400/30 shadow-[0_4px_12px_rgba(34,211,238,0.3)]'
                 : rank === 3
-                  ? 'bg-gradient-to-br from-slate-400/25 to-slate-500/15 border-2 border-slate-400/30'
-                  : 'bg-gradient-to-br from-slate-700/30 to-slate-800/20 border-2 border-slate-600/30'
+                  ? 'bg-gradient-to-br from-slate-400/25 to-slate-500/15 border-2 border-slate-400/30 shadow-[0_4px_12px_rgba(148,163,184,0.3)]'
+                  : 'bg-gradient-to-br from-slate-700/30 to-slate-800/20 border-2 border-slate-600/30 shadow-[0_4px_10px_rgba(0,0,0,0.5)]'
             } shadow-lg`}
         ></div>
         {/* Icon or Number */}
         <div className="relative z-10 flex items-center justify-center">
-          {rank === 1 && activeTab === 'rating' && <GiImperialCrown size={24} className="text-yellow-400 drop-shadow-[0_2px_8px_rgba(250,204,21,0.8)]" />}
-          {rank === 1 && activeTab === 'kills' && <GiCrownedSkull size={24} className="text-yellow-400 drop-shadow-[0_2px_8px_rgba(250,204,21,0.8)]" />}
-          {rank === 1 && activeTab === 'position' && <GiLaurelCrown size={24} className="text-yellow-400 drop-shadow-[0_2px_8px_rgba(250,204,21,0.8)]" />}
-          {rank === 2 && <IoTrophySharp size={22} className="text-cyan-200 drop-shadow-[0_2px_8px_rgba(165,243,252,0.8)]" />}
-          {rank === 3 && <IoTrophySharp size={22} className="text-slate-300 drop-shadow-[0_2px_8px_rgba(203,213,225,0.8)]" />}
+          {/* Rating Icons */}
+          {activeTab === 'rating' && rank === 1 && <GiImperialCrown size={24} className="text-yellow-400 drop-shadow-[0_2px_8px_rgba(250,204,21,0.8)]" />}
+          {activeTab === 'rating' && rank === 2 && <GiImperialCrown size={22} className="text-cyan-200 drop-shadow-[0_2px_8px_rgba(165,243,252,0.8)]" />}
+          {activeTab === 'rating' && rank === 3 && <GiImperialCrown size={22} className="text-slate-300 drop-shadow-[0_2px_8px_rgba(203,213,225,0.8)]" />}
+          
+          {/* Kills Icons */}
+          {activeTab === 'kills' && rank === 1 && <GiCrownedSkull size={24} className="text-yellow-400 drop-shadow-[0_2px_8px_rgba(250,204,21,0.8)]" />}
+          {activeTab === 'kills' && rank === 2 && <GiCrownedSkull size={22} className="text-cyan-200 drop-shadow-[0_2px_8px_rgba(165,243,252,0.8)]" />}
+          {activeTab === 'kills' && rank === 3 && <GiCrownedSkull size={22} className="text-slate-300 drop-shadow-[0_2px_8px_rgba(203,213,225,0.8)]" />}
+          
+          {/* Position Icons */}
+          {activeTab === 'position' && rank === 1 && <GiLaurelCrown size={24} className="text-yellow-400 drop-shadow-[0_2px_8px_rgba(250,204,21,0.8)]" />}
+          {activeTab === 'position' && rank === 2 && <GiLaurelCrown size={22} className="text-cyan-200 drop-shadow-[0_2px_8px_rgba(165,243,252,0.8)]" />}
+          {activeTab === 'position' && rank === 3 && <GiLaurelCrown size={22} className="text-slate-300 drop-shadow-[0_2px_8px_rgba(203,213,225,0.8)]" />}
+          
           {rank > 3 && <span className="font-heading font-bold text-muted-foreground">{rank}</span>}
         </div>
       </div>
@@ -459,7 +469,7 @@ export default function Leaderboard() {
 
   return (
     <Layout>
-      <div className="container-main py-8 bg-slate-950/50 min-h-screen">
+      <div className="container-main py-8 bg-gradient-to-r from-blue-900/20 via-black to-blue-900/20 min-h-screen">
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-heading font-bold text-neon-blue mb-2">
             Placar De Líderes
@@ -471,36 +481,25 @@ export default function Leaderboard() {
 
         {/* Season Info */}
         {seasonInfo && (
-          <div className="card-base p-4 mb-8 bg-gradient-to-r from-primary/10 to-transparent border-l-4 border-primary">
+          <div className="card-base p-4 mb-8 bg-gradient-to-r from-slate-900/80 via-slate-800/70 to-slate-900/80 border border-cyan-500/30 shadow-[0_4px_16px_rgba(6,182,212,0.2)]">
             <div className="flex items-center justify-between flex-wrap gap-4">
-              <div>
-                <h3 className="font-heading font-bold text-lg text-neon-blue mb-1">
+              <div className="flex items-center gap-2">
+                <h3 className="font-heading font-bold text-base text-cyan-400">
                   {seasonInfo.name}
                 </h3>
-                <p className="text-sm text-muted-foreground">
-                  Temporada atual em andamento
-                </p>
+                <span className="text-sm text-muted-foreground">em andamento</span>
               </div>
               {daysRemaining !== null && daysRemaining > 0 && (
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
-                      Tempo restante
-                    </p>
-                    <p className="font-heading font-bold text-2xl text-neon-blue">
-                      {daysRemaining}
-                    </p>
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm font-semibold text-foreground">
-                      {daysRemaining === 1 ? 'dia' : 'dias'}
-                    </p>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Tempo restante:</span>
+                  <span className="font-heading font-bold text-lg text-cyan-400">
+                    {daysRemaining} {daysRemaining === 1 ? 'dia' : 'dias'}
+                  </span>
                 </div>
               )}
               {daysRemaining !== null && daysRemaining <= 0 && (
-                <div className="px-4 py-2 bg-destructive/20 border border-destructive/30 rounded-lg">
-                  <p className="text-sm font-semibold text-destructive">
+                <div className="px-3 py-1.5 bg-destructive/20 border border-destructive/30 rounded-lg">
+                  <p className="text-xs font-semibold text-destructive">
                     Temporada Encerrada
                   </p>
                 </div>
