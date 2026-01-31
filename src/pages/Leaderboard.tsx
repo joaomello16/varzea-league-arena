@@ -7,6 +7,7 @@ import { IoTrophySharp } from 'react-icons/io5';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCanEditPlayer } from '@/hooks/use-can-edit-player';
 import { PlayerEditModal } from '@/components/PlayerEditModal';
+import bannerAlter from '../assets/banner-alter.JPG';
 
 // Tipos para leaderboard
 interface LeaderboardEntry {
@@ -289,6 +290,7 @@ export default function Leaderboard() {
   const [error, setError] = useState<string | null>(null);
   const [isMobileModalOpen, setIsMobileModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [selectedPlayerTitles, setSelectedPlayerTitles] = useState<PlayerTitle[]>([]);
@@ -478,47 +480,70 @@ export default function Leaderboard() {
 
   return (
     <Layout>
-      <div className="container-main py-8 bg-black to-98% min-h-screen">
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-heading font-bold text-neon-blue mb-2">
-            Placar De Líderes
-          </h1>
-          <p className="text-muted-foreground text-sm md:text-base">
-            Acompanhe os 20 melhores jogadores da temporada e veja quem domina a Varzea League.
-          </p>
-        </div>
-
-        {/* Season Info */}
-        {seasonInfo && (
-          <div className="card-base p-4 mb-8 bg-gradient-to-r from-slate-900/80 via-slate-800/70 to-slate-900/80 border border-cyan-500/30 shadow-[0_4px_16px_rgba(6,182,212,0.2)]">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-2">
-                <h3 className="font-heading font-bold text-base text-cyan-400">
-                  {seasonInfo.name}
-                </h3>
-                <span className="text-sm text-muted-foreground">em andamento</span>
-              </div>
-              {daysRemaining !== null && daysRemaining > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Tempo restante:</span>
-                  <span className="font-heading font-bold text-lg text-cyan-400">
-                    {daysRemaining} {daysRemaining === 1 ? 'dia' : 'dias'}
-                  </span>
-                </div>
-              )}
-              {daysRemaining !== null && daysRemaining <= 0 && (
-                <div className="px-3 py-1.5 bg-destructive/20 border border-destructive/30 rounded-lg">
-                  <p className="text-xs font-semibold text-destructive">
-                    Temporada Encerrada
-                  </p>
-                </div>
-              )}
+      <div className="bg-black to-98% min-h-screen">
+        {/* Banner com Imagem */}
+        <div className="relative w-full h-[400px] md:h-[500px] overflow-hidden">
+          {/* Imagem de Fundo */}
+          <img
+            src={bannerAlter}
+            alt="Banner Placar de Líderes"
+            className="absolute inset-0 w-full h-full object-cover object-[75%_center] md:object-center"
+          />
+          
+          {/* Overlay escuro para melhor legibilidade */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent"></div>
+          
+          {/* Conteúdo do Banner */}
+          <div className="relative h-full flex flex-col justify-between p-6 md:p-12">
+            {/* Título - Posicionado na área da fumaça azul, à esquerda */}
+            <div className="mt-8 md:mt-16">
+              <h1 className="text-3xl md:text-6xl lg:text-7xl font-heading font-bold text-neon-blue drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] mb-4">
+                Placar De Líderes
+              </h1>
+            </div>
+            
+            {/* Texto descritivo - Abaixo da fumaça, à esquerda */}
+            <div className="mb-8 md:mb-8">
+              <p className="text-sm md:text-xl text-muted-foreground max-w-[70%] md:max-w-2xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] leading-snug md:leading-relaxed">
+                Acompanhe os 20 melhores jogadores da temporada e veja quem domina a Varzea League.
+              </p>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-8 border-b border-border">
+        {/* Container com padding para o conteúdo abaixo do banner */}
+        <div className="container-main py-8">
+          {/* Season Info - Abaixo do Banner */}
+          {seasonInfo && (
+            <div className="card-base p-4 mb-8 bg-gradient-to-r from-slate-900/80 via-slate-800/70 to-slate-900/80 border border-cyan-500/30 shadow-[0_4px_16px_rgba(6,182,212,0.2)]">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-heading font-bold text-base text-cyan-400">
+                    {seasonInfo.name}
+                  </h3>
+                  <span className="text-sm text-muted-foreground">em andamento</span>
+                </div>
+                {daysRemaining !== null && daysRemaining > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Tempo restante:</span>
+                    <span className="font-heading font-bold text-lg text-cyan-400">
+                      {daysRemaining} {daysRemaining === 1 ? 'dia' : 'dias'}
+                    </span>
+                  </div>
+                )}
+                {daysRemaining !== null && daysRemaining <= 0 && (
+                  <div className="px-3 py-1.5 bg-destructive/20 border border-destructive/30 rounded-lg">
+                    <p className="text-xs font-semibold text-destructive">
+                      Temporada Encerrada
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Tabs */}
+          <div className="flex gap-2 mb-8 border-b border-border">
           <button
             onClick={() => handleTabChange('rating')}
             className={`px-6 py-3 font-heading font-bold text-lg transition-all ${
@@ -703,37 +728,201 @@ export default function Leaderboard() {
           />
         )}
 
-        {/* Card de Explicação do Rating */}
-        <div className="card-base p-6 mt-12 border border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-              <Trophy size={24} className="text-white" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-heading font-bold text-neon-blue mb-3">
-                Como é Calculado o Rating?
-              </h2>
-              <p className="text-muted-foreground leading-relaxed mb-3">
-                O rating é calculado pela <span className="text-foreground font-semibold">soma dos pontos por posição + kills individuais</span> de todos os campeonatos que o player participou na temporada.
-              </p>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-start gap-2">
-                  <span className="text-yellow-500 font-bold mt-0.5">•</span>
-                  <p className="text-muted-foreground">
-                    <span className="text-foreground font-semibold">Edição Varzea League:</span> Pontos por posição com multiplicador <span className="text-cyan-400 font-bold">1x</span>
-                  </p>
+        {/* Botão de Informações */}
+        <div className="mt-12 flex justify-center">
+          <button
+            onClick={() => setIsInfoModalOpen(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Trophy size={18} />
+            + Informações sobre o Leaderboard
+          </button>
+        </div>
+
+        {/* Modal de Informações */}
+        {isInfoModalOpen && (
+          <div 
+            className="fixed inset-0 z-[999] bg-black/80 flex items-center justify-center px-4 overflow-y-auto py-8"
+            onClick={() => setIsInfoModalOpen(false)}
+          >
+            <div 
+              className="relative w-full max-w-3xl my-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setIsInfoModalOpen(false)}
+                className="absolute -top-4 -right-4 bg-background rounded-full p-2 shadow-lg z-10 hover:bg-muted transition-colors"
+              >
+                ✕
+              </button>
+
+              {/* Modal Content */}
+              <div className="card-base p-8 max-h-[85vh] overflow-y-auto">
+                {/* Header */}
+                <div className="flex items-center gap-4 mb-6 pb-6 border-b border-border">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                    <Trophy size={24} className="text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-neon-blue">
+                    Como funciona o Leaderboard?
+                  </h2>
                 </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-yellow-500 font-bold mt-0.5">•</span>
-                  <p className="text-muted-foreground">
-                    <span className="text-foreground font-semibold">Campeonato Varzea League:</span> Pontos por posição com multiplicador <span className="text-cyan-400 font-bold">1,5x</span>
+
+                {/* Introdução */}
+                <div className="mb-8">
+                  <p className="text-muted-foreground leading-relaxed mb-4">
+                    O leaderboard consolida todas as estatísticas dos campeonatos de uma determinada temporada, reunindo os dados em um ranking geral dos <span className="text-foreground font-semibold">20 melhores jogadores da temporada</span>.
                   </p>
+                  
+                  <div className="card-base p-4 bg-muted/30 border border-border">
+                    <p className="text-sm font-semibold text-foreground mb-2">
+                      Ao final de cada temporada:
+                    </p>
+                    <ul className="space-y-1 text-sm text-muted-foreground">
+                      <li className="flex items-start gap-2">
+                        <span className="text-cyan-400">•</span>
+                        <span>O ranking é resetado</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-cyan-400">•</span>
+                        <span>Uma nova temporada é iniciada do zero</span>
+                      </li>
+                    </ul>
+                    <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border/50">
+                      🔎 Rankings de temporadas anteriores continuam disponíveis e podem ser consultados através do filtro de temporadas.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Como é calculado o Rating */}
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-foreground mb-3">
+                    Como é calculado o Rating?
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed mb-4">
+                    O rating é calculado pela <span className="text-foreground font-semibold">soma total</span> de:
+                  </p>
+                  <div className="card-base p-4 bg-primary/10 border border-primary/30 mb-4">
+                    <p className="text-center font-bold text-lg text-foreground">
+                      Pontos por posição + kills individuais
+                    </p>
+                    <p className="text-center text-sm text-muted-foreground mt-1">
+                      em todos os campeonatos que o jogador disputou durante a temporada.
+                    </p>
+                  </div>
+
+                  {/* Multiplicadores */}
+                  <div className="space-y-3">
+                    <p className="font-semibold text-foreground text-sm mb-2">
+                      Multiplicadores por tipo de campeonato:
+                    </p>
+                    <div className="grid gap-3">
+                      <div className="card-base p-4 bg-gradient-to-r from-blue-950/30 to-transparent border-l-4 border-blue-500">
+                        <p className="font-bold text-foreground mb-1">
+                          Edição Varzea League
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Pontos por posição com multiplicador <span className="text-cyan-400 font-bold">1x</span>
+                        </p>
+                      </div>
+                      <div className="card-base p-4 bg-gradient-to-r from-cyan-950/30 to-transparent border-l-4 border-cyan-500">
+                        <p className="font-bold text-foreground mb-1">
+                          Campeonato Varzea League
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Pontos por posição com multiplicador <span className="text-cyan-400 font-bold">1,5x</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* De onde vêm os pontos por posição */}
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-foreground mb-3">
+                    De onde vêm os pontos por posição?
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed mb-4">
+                    Os pontos por posição são calculados a partir de:
+                  </p>
+                  <ul className="space-y-2 mb-4">
+                    <li className="flex items-start gap-2">
+                      <span className="text-cyan-400 font-bold mt-0.5">•</span>
+                      <span className="text-muted-foreground">Pontuação total do time na sala</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-cyan-400 font-bold mt-0.5">•</span>
+                      <span className="text-muted-foreground">Bônus de colocação, aplicado apenas aos três primeiros colocados</span>
+                    </li>
+                  </ul>
+
+                  {/* Bônus de colocação */}
+                  <div className="card-base p-4 bg-muted/30 border border-border mb-4">
+                    <p className="font-semibold text-foreground text-sm mb-3">
+                      Bônus de colocação:
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">🥇</span>
+                        <span className="text-sm text-muted-foreground">
+                          1º lugar: <span className="text-yellow-400 font-bold">+25 pontos</span>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">🥈</span>
+                        <span className="text-sm text-muted-foreground">
+                          2º lugar: <span className="text-cyan-400 font-bold">+10 pontos</span>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">🥉</span>
+                        <span className="text-sm text-muted-foreground">
+                          3º lugar: <span className="text-slate-400 font-bold">+5 pontos</span>
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border/50">
+                      Do 4º lugar em diante, não há bônus de colocação — o time recebe apenas a pontuação obtida na sala.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Exemplo prático */}
+                <div>
+                  <h3 className="text-xl font-bold text-foreground mb-3">
+                    Exemplo prático
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="card-base p-4 bg-gradient-to-r from-yellow-950/20 to-transparent border-l-4 border-yellow-500">
+                      <p className="font-bold text-foreground mb-2">
+                        Um time fez 60 pontos na sala e terminou em 1º lugar:
+                      </p>
+                      <ul className="space-y-1 text-sm text-muted-foreground mb-2">
+                        <li>Pontos da sala: <span className="text-foreground font-semibold">60</span></li>
+                        <li>Bônus de colocação: <span className="text-yellow-400 font-semibold">+25</span></li>
+                      </ul>
+                      <p className="text-sm font-bold text-foreground pt-2 border-t border-border/50">
+                        Total: <span className="text-yellow-400">85 pontos</span>
+                      </p>
+                    </div>
+
+                    <div className="card-base p-4 bg-gradient-to-r from-slate-950/20 to-transparent border-l-4 border-slate-500">
+                      <p className="font-bold text-foreground mb-2">
+                        Um time que ficou em 4º ou 5º lugar:
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Recebe somente os pontos da sala, sem bônus adicional.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
+        </div>
       </div>
     </Layout>
   );

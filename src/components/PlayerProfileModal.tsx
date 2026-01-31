@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Player } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { X, User as UserIcon, Star } from 'lucide-react';
+import { X, User as UserIcon, Star, History } from 'lucide-react';
 
 // Tipos para títulos
 interface PlayerTitle {
@@ -14,6 +14,22 @@ interface PlayerTitle {
   season_name: string;
   position: 1 | 2 | 3;
   title_label: string;
+}
+
+// Tipos para histórico de torneios
+interface TournamentHistory {
+  id: string;
+  player_id: string;
+  tournament_id: string;
+  kills: number;
+  position: number;
+  position_points: number;
+  created_at: string;
+  tournament_name: string;
+  edition: number;
+  finished: boolean;
+  season_id: string;
+  season_name: string;
 }
 
 interface PlayerProfileModalProps {
@@ -34,6 +50,9 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
     total_kills: number;
     total_position_points: number;
   } | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [tournamentHistory, setTournamentHistory] = useState<TournamentHistory[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Fetch titles quando o player mudar
   useEffect(() => {
@@ -108,8 +127,46 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
     fetchSeasonStats();
   }, [player?.id]);
 
+  // Fetch tournament history quando showHistory mudar
+  useEffect(() => {
+    async function fetchHistory() {
+      if (!player || !showHistory) {
+        return;
+      }
+
+      setHistoryLoading(true);
+      try {
+        const { data: historyData } = await supabase
+          .from('player_tournament_history')
+          .select('*')
+          .eq('player_id', player.id)
+          .order('created_at', { ascending: false });
+
+        if (historyData) {
+          setTournamentHistory(historyData as TournamentHistory[]);
+        }
+      } catch (err) {
+        console.warn('Erro ao buscar histórico:', err);
+      } finally {
+        setHistoryLoading(false);
+      }
+    }
+
+    fetchHistory();
+  }, [player?.id, showHistory]);
+
   // Verificar se é meu próprio player
   const isMyPlayer = player && user && user.player_id === player.id;
+
+  // Agrupar histórico por temporada
+  const historyBySeason = tournamentHistory.reduce((acc, tournament) => {
+    const seasonName = tournament.season_name;
+    if (!acc[seasonName]) {
+      acc[seasonName] = [];
+    }
+    acc[seasonName].push(tournament);
+    return acc;
+  }, {} as Record<string, TournamentHistory[]>);
 
   // Verificar se o botão "Este player sou eu" deve aparecer
   const shouldShowClaimButton =
@@ -277,6 +334,89 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
             )}
 
 
+
+            {/* Botão Histórico */}
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="btn-secondary w-full mb-4 flex items-center justify-center gap-2"
+            >
+              <History size={18} />
+              {showHistory ? 'Ocultar Histórico' : 'Ver Histórico de Participações'}
+            </button>
+
+            {/* Histórico de Participações */}
+            {showHistory && (
+              <div className="w-full mb-6">
+                <div className="card-base p-4 bg-muted/30 border border-border">
+                  {historyLoading ? (
+                    <div className="text-center py-4">
+                      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Carregando histórico...</p>
+                    </div>
+                  ) : tournamentHistory.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Nenhuma participação em campeonatos registrada.
+                    </p>
+                  ) : (
+                    <div className="space-y-6">
+                      {Object.entries(historyBySeason).map(([seasonName, tournaments]) => (
+                        <div key={seasonName}>
+                          <h4 className="text-sm font-bold text-cyan-400 mb-3 uppercase tracking-wider">
+                            {seasonName}
+                          </h4>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead className="bg-muted/50 border-b border-border">
+                                <tr>
+                                  <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">
+                                    Torneio
+                                  </th>
+                                  <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase">
+                                    Kills
+                                  </th>
+                                  <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase">
+                                    Posição
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border/50">
+                                {tournaments.map((tournament) => (
+                                  <tr key={tournament.id} className="hover:bg-muted/20 transition-colors">
+                                    <td className="px-3 py-2 text-left">
+                                      <span className="text-foreground font-medium">
+                                        {tournament.tournament_name}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground ml-2">
+                                        Ed. {tournament.edition}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-2 text-center">
+                                      <span className="text-green-400 font-semibold">
+                                        {tournament.kills}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-2 text-center">
+                                      <span className={`font-semibold ${
+                                        tournament.position === 1 ? 'text-yellow-400' :
+                                        tournament.position === 2 ? 'text-cyan-400' :
+                                        tournament.position === 3 ? 'text-slate-400' :
+                                        'text-muted-foreground'
+                                      }`}>
+                                        {tournament.position}º
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Messages */}
             {claimMessage && (
