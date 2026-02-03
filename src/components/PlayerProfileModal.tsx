@@ -205,7 +205,7 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
 
   return player ? (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="card-base w-full max-w-md relative overflow-hidden">
+      <div className="card-base w-full max-w-md relative overflow-hidden max-h-[90vh] flex flex-col">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -214,9 +214,8 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
           <X size={20} className="text-muted-foreground" />
         </button>
 
-        {/* Content */}
-        <div>
-          {/* Cover */}
+        {/* Content with Scroll */}
+        <div className="overflow-y-auto">{/* Cover */}
           {player.cover_url && (
             <img
               src={player.cover_url}
@@ -358,9 +357,9 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
                       Nenhuma participação em campeonatos registrada.
                     </p>
                   ) : (
-                    <div className="space-y-6">
+                    <div className="max-h-96 overflow-y-auto pr-2">
                       {Object.entries(historyBySeason).map(([seasonName, tournaments]) => (
-                        <div key={seasonName}>
+                        <div key={seasonName} className="mb-6 last:mb-0">
                           <h4 className="text-sm font-bold text-cyan-400 mb-3 uppercase tracking-wider">
                             {seasonName}
                           </h4>
