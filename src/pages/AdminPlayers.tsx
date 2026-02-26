@@ -107,38 +107,63 @@ export default function AdminPlayers() {
 
   const fetchPlayers = async (page: number = 1, searchTerm: string = '') => {
     setLoading(true);
-    const start = (page - 1) * itemsPerPage;
     
-  let query = supabase
-  .from('players')
-  .select('*', { count: 'exact' })
-  .order('created_at', { ascending: false });
+    try {
+      // Buscar players
+      let query = supabase
+        .from('players')
+        .select('*', { count: 'exact' });
 
-if (searchTerm.trim()) {
-  query = query.ilike('nick', `%${searchTerm}%`);
-}
+      if (searchTerm.trim()) {
+        query = query.ilike('nick', `%${searchTerm}%`);
+      }
 
-const { data, error, count } = await query.range(
-  start,
-  start + itemsPerPage - 1
-);
+      const { data, error, count } = await query;
 
-      
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+        return;
+      }
 
-    if (error) {
-      setError(error.message);
-    } else {
+      // Ordenar players por critérios:
+      // 1. Vinculação ativa (user_id não null) primeiro
+      // 2. "Estilo" - quantidade de elementos preenchidos (avatar, cover, bio)
+      const sortedPlayers = (data || []).sort((a, b) => {
+        // Critério 1: Vinculação ativa
+        const aHasUser = a.user_id ? 1 : 0;
+        const bHasUser = b.user_id ? 1 : 0;
+        
+        if (aHasUser !== bHasUser) {
+          return bHasUser - aHasUser; // Vinculados primeiro
+        }
+
+        // Critério 2: Pontuação de "estilo"
+        const aStyleScore = (a.avatar_url ? 1 : 0) + (a.cover_url ? 1 : 0) + (a.bio ? 1 : 0);
+        const bStyleScore = (b.avatar_url ? 1 : 0) + (b.cover_url ? 1 : 0) + (b.bio ? 1 : 0);
+        
+        return bStyleScore - aStyleScore; // Maior pontuação primeiro
+      });
+
+      // Aplicar paginação
+      const start = (page - 1) * itemsPerPage;
+      const paginatedPlayers = sortedPlayers.slice(start, start + itemsPerPage);
+
       // Se o player selecionado foi atualizado, atualizar o modal
       if (selectedPlayer) {
-        const updatedPlayer = (data || []).find(p => p.id === selectedPlayer.id);
+        const updatedPlayer = sortedPlayers.find(p => p.id === selectedPlayer.id);
         if (updatedPlayer) {
           setSelectedPlayer(updatedPlayer);
         }
       }
-      setPlayers(data || []);
-      setTotalCount(count || 0);
+
+      setPlayers(paginatedPlayers);
+      setTotalCount(sortedPlayers.length);
       setCurrentPage(page);
+    } catch (err) {
+      setError('Erro ao carregar players');
     }
+    
     setLoading(false);
   };
 

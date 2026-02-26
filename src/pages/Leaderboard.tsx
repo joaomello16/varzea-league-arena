@@ -7,7 +7,17 @@ import { IoTrophySharp } from 'react-icons/io5';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCanEditPlayer } from '@/hooks/use-can-edit-player';
 import { PlayerEditModal } from '@/components/PlayerEditModal';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import bannerAlter from '../assets/banner-alter.JPG';
+
+// Tipos para season
+interface Season {
+  id: string;
+  name: string;
+  active: boolean;
+  start_date: string;
+  end_date: string | null;
+}
 
 // Tipos para leaderboard
 interface LeaderboardEntry {
@@ -295,7 +305,9 @@ export default function Leaderboard() {
   const [totalCount, setTotalCount] = useState(0);
   const [selectedPlayerTitles, setSelectedPlayerTitles] = useState<PlayerTitle[]>([]);
   const [activeTab, setActiveTab] = useState<'rating' | 'kills' | 'position'>('rating');
-  const [seasonInfo, setSeasonInfo] = useState<{ name: string; endDate: string | null } | null>(null);
+  const [seasonInfo, setSeasonInfo] = useState<{ name: string; endDate: string | null; active: boolean } | null>(null);
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
   const pageSize = 10;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -306,10 +318,44 @@ export default function Leaderboard() {
     setPage(1);
   };
 
+  const handleSeasonChange = (seasonId: string) => {
+    setSelectedSeasonId(seasonId);
+    setPage(1);
+  };
+
   // Calcular dias restantes da temporada
   const daysRemaining = seasonInfo?.endDate 
     ? Math.ceil((new Date(seasonInfo.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     : null;
+
+  // Buscar todas as temporadas ao carregar
+  useEffect(() => {
+    async function fetchSeasons() {
+      const { data: seasonsData, error: seasonsError } = await supabase
+        .from('seasons')
+        .select('id, name, active, start_date, end_date')
+        .order('start_date', { ascending: false });
+
+      if (seasonsError) {
+        console.warn('Erro ao buscar temporadas:', seasonsError);
+        return;
+      }
+
+      if (seasonsData) {
+        setSeasons(seasonsData);
+        // Definir a temporada ativa como padrão
+        const activeSeason = seasonsData.find((s) => s.active);
+        if (activeSeason) {
+          setSelectedSeasonId(activeSeason.id);
+        } else if (seasonsData.length > 0) {
+          // Se não houver temporada ativa, usar a primeira
+          setSelectedSeasonId(seasonsData[0].id);
+        }
+      }
+    }
+
+    fetchSeasons();
+  }, []);
 
   // Fechar menu mobile quando abrir o modal
   useEffect(() => {
@@ -321,18 +367,22 @@ export default function Leaderboard() {
 
   useEffect(() => {
     async function fetchPlayers() {
+      // Aguardar selectedSeasonId ser definido
+      if (!selectedSeasonId) {
+        return;
+      }
+
       try {
-        // 1. Buscar temporada ativa
+        // 1. Buscar informações da temporada selecionada
         const { data: seasonData, error: seasonError } = await supabase
           .from('seasons')
-          .select('id, name, end_date')
-          .eq('active', true)
-          .limit(1)
+          .select('id, name, end_date, active')
+          .eq('id', selectedSeasonId)
           .single();
 
         if (seasonError) {
-          console.warn('Erro ao buscar temporada ativa:', seasonError);
-          setError('Erro ao buscar temporada ativa');
+          console.warn('Erro ao buscar temporada:', seasonError);
+          setError('Erro ao buscar temporada');
           setLoading(false);
           return;
         }
@@ -344,6 +394,7 @@ export default function Leaderboard() {
           setSeasonInfo({
             name: seasonData.name,
             endDate: seasonData.end_date,
+            active: seasonData.active,
           });
         }
 
@@ -420,12 +471,12 @@ export default function Leaderboard() {
     }
 
     fetchPlayers();
-  }, [page, activeTab]);
+  }, [page, activeTab, selectedSeasonId]);
 
-  // Fetch titles quando selectedPlayer mudar
+  // Fetch titles quando selectedPlayer ou selectedSeasonId mudar
   useEffect(() => {
     async function fetchTitles() {
-      if (!selectedPlayer) {
+      if (!selectedPlayer || !selectedSeasonId) {
         setSelectedPlayerTitles([]);
         return;
       }
@@ -435,6 +486,7 @@ export default function Leaderboard() {
           .from('player_titles')
           .select('*')
           .eq('player_id', selectedPlayer.id)
+          .eq('season_id', selectedSeasonId)
           .order('season_name', { ascending: false });
 
         if (titlesError) {
@@ -450,7 +502,7 @@ export default function Leaderboard() {
     }
 
     fetchTitles();
-  }, [selectedPlayer?.id]);
+  }, [selectedPlayer?.id, selectedSeasonId]);
 
   const handlePlayerUpdate = (updatedPlayer: Player) => {
     setPlayers(
@@ -521,9 +573,11 @@ export default function Leaderboard() {
                   <h3 className="font-heading font-bold text-base text-cyan-400">
                     {seasonInfo.name}
                   </h3>
-                  <span className="text-sm text-muted-foreground">em andamento</span>
+                  {seasonInfo.active && (
+                    <span className="text-sm text-muted-foreground">em andamento</span>
+                  )}
                 </div>
-                {daysRemaining !== null && daysRemaining > 0 && (
+                {seasonInfo.active && daysRemaining !== null && daysRemaining > 0 && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Tempo restante:</span>
                     <span className="font-heading font-bold text-lg text-cyan-400">
@@ -531,14 +585,35 @@ export default function Leaderboard() {
                     </span>
                   </div>
                 )}
-                {daysRemaining !== null && daysRemaining <= 0 && (
-                  <div className="px-3 py-1.5 bg-destructive/20 border border-destructive/30 rounded-lg">
-                    <p className="text-xs font-semibold text-destructive">
+                {!seasonInfo.active && (
+                  <div className="px-3 py-1.5 bg-muted/30 border border-muted rounded-lg">
+                    <p className="text-xs font-semibold text-muted-foreground">
                       Temporada Encerrada
                     </p>
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Filtro de Temporadas */}
+          {seasons.length > 1 && (
+            <div className="mb-6 flex items-center gap-3">
+              <label className="text-sm font-medium text-muted-foreground">
+                Filtrar por Temporada:
+              </label>
+              <Select value={selectedSeasonId || ''} onValueChange={handleSeasonChange}>
+                <SelectTrigger className="w-[250px]">
+                  <SelectValue placeholder="Selecione uma temporada" />
+                </SelectTrigger>
+                <SelectContent>
+                  {seasons.map((season) => (
+                    <SelectItem key={season.id} value={season.id}>
+                      {season.name} {season.active && '(Atual)'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 

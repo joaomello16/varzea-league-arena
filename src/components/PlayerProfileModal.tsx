@@ -84,37 +84,32 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
     fetchTitles();
   }, [player?.id]);
 
-  // Fetch season stats
+  // Fetch overall stats (todas as temporadas)
   useEffect(() => {
-    async function fetchSeasonStats() {
+    async function fetchOverallStats() {
       if (!player) {
         setSeasonStats(null);
         return;
       }
 
       try {
-        // Buscar temporada ativa
-        const { data: seasonData } = await supabase
-          .from('seasons')
-          .select('id')
-          .eq('active', true)
-          .single();
-
-        if (!seasonData) {
-          setSeasonStats(null);
-          return;
-        }
-
-        // Buscar stats do player na temporada ativa
+        // Buscar todas as estatísticas do player em todas as temporadas
         const { data: statsData } = await supabase
           .from('leaderboard_by_season')
           .select('rating, total_kills, total_position_points')
-          .eq('player_id', player.id)
-          .eq('season_id', seasonData.id)
-          .single();
+          .eq('player_id', player.id);
 
-        if (statsData) {
-          setSeasonStats(statsData);
+        if (statsData && statsData.length > 0) {
+          // Somar estatísticas de todas as temporadas
+          const totalStats = statsData.reduce(
+            (acc, curr) => ({
+              rating: acc.rating + (curr.rating || 0),
+              total_kills: acc.total_kills + (curr.total_kills || 0),
+              total_position_points: acc.total_position_points + (curr.total_position_points || 0),
+            }),
+            { rating: 0, total_kills: 0, total_position_points: 0 }
+          );
+          setSeasonStats(totalStats);
         } else {
           setSeasonStats(null);
         }
@@ -124,7 +119,7 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
       }
     }
 
-    fetchSeasonStats();
+    fetchOverallStats();
   }, [player?.id]);
 
   // Fetch tournament history quando showHistory mudar
@@ -249,7 +244,7 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
             <div className="flex items-center gap-2 mb-4">
               <Star size={18} className="text-accent" />
               <span className="font-heading font-semibold text-foreground">
-                {seasonStats?.rating ?? player.rating ?? 0} pts
+                {seasonStats?.rating ?? player.rating ?? 0}
               </span>
             </div>
 
@@ -284,55 +279,47 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
               </p>
             )}
 
-            {/* Titles */}
+            {/* Main Titles */}
             <div className="w-full mb-6">
               <h3 className="text-sm font-heading font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
-                Títulos
+                Títulos Principais
               </h3>
-              {titles.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-2">
-                  -
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {titles.map((title, i) => {
-                    const colorClasses = {
-                      1: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
-                      2: 'bg-indigo-500/15 text-indigo-300 border border-indigo-400/40',
-                      3: 'bg-slate-400/20 text-slate-300 border border-slate-400/30',
-                    };
+              {(() => {
+                // Filtrar títulos: prioridade para campeões, depois vice
+                const champions = titles.filter((t) => t.position === 1);
+                const runners = titles.filter((t) => t.position === 2);
+                const mainTitles = champions.length > 0 ? champions : runners.length > 0 ? runners : [];
 
-                    return (
-                      <div
-                        key={i}
-                        className={`rounded px-3 py-2 text-sm ${colorClasses[title.position]}`}
-                      >
-                        {title.tournament_name} – {title.title_label}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                if (mainTitles.length === 0) {
+                  return (
+                    <p className="text-xs text-muted-foreground text-center py-2">
+                      -
+                    </p>
+                  );
+                }
+
+                return (
+                  <div className="space-y-2">
+                    {mainTitles.map((title, i) => {
+                      const colorClasses = {
+                        1: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
+                        2: 'bg-indigo-500/15 text-indigo-300 border border-indigo-400/40',
+                        3: 'bg-slate-400/20 text-slate-300 border border-slate-400/30',
+                      };
+
+                      return (
+                        <div
+                          key={i}
+                          className={`rounded px-3 py-2 text-sm ${colorClasses[title.position]}`}
+                        >
+                          {title.tournament_name} – {title.title_label}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
-
-            {/* Vinculação Info */}
-            {isMyPlayer && (
-              <div className="card-base p-3 bg-success/10 border border-success/30 mb-4 w-full">
-                <p className="text-sm text-success text-center">
-                  ✓ Este é o seu player
-                </p>
-              </div>
-            )}
-
-            {!shouldShowClaimButton && player.user_id !== null && !isMyPlayer && (
-              <div className="card-base p-3 bg-muted/30 mb-4 w-full">
-                <p className="text-sm text-muted-foreground text-center">
-                  Este player já está vinculado a uma conta
-                </p>
-              </div>
-            )}
-
-
 
             {/* Botão Histórico */}
             <button
