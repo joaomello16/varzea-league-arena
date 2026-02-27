@@ -32,6 +32,18 @@ interface TournamentHistory {
   season_name: string;
 }
 
+// Tipos para tags
+interface Tag {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+interface ProfileTag {
+  tag_id: string;
+  tag_name: string;
+}
+
 interface PlayerProfileModalProps {
   player: Player | null;
   onClose: () => void;
@@ -39,7 +51,7 @@ interface PlayerProfileModalProps {
 }
 
 export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerProfileModalProps) {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [claimLoading, setClaimLoading] = useState(false);
   const [claimMessage, setClaimMessage] = useState<string | null>(null);
   const [claimError, setClaimError] = useState<string | null>(null);
@@ -53,6 +65,15 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
   const [showHistory, setShowHistory] = useState(false);
   const [tournamentHistory, setTournamentHistory] = useState<TournamentHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  
+  // Estados para tags
+  const [earnedTags, setEarnedTags] = useState<Tag[]>([]);
+  const [profileTags, setProfileTags] = useState<string[]>([]); // IDs das tags exibidas
+  const [displayTags, setDisplayTags] = useState<ProfileTag[]>([]); // Tags para exibir no perfil público
+  const [showTagsEdit, setShowTagsEdit] = useState(false);
+  const [tagsLoading, setTagsLoading] = useState(false);
+  
+  const canEditTags = user && (player?.user_id === user.id || isAdmin);
 
   // Fetch titles quando o player mudar
   useEffect(() => {
@@ -121,6 +142,133 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
 
     fetchOverallStats();
   }, [player?.id]);
+
+  // Fetch tags do perfil (sempre)
+  useEffect(() => {
+    async function fetchProfileTags() {
+      if (!player) {
+        setDisplayTags([]);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('player_profile_tags')
+          .select(`
+            tag_id,
+            tags!inner(name)
+          `)
+          .eq('player_id', player.id);
+
+        if (error) throw error;
+
+        const tags = (data || []).map(item => ({
+          tag_id: item.tag_id,
+          tag_name: (item.tags as any).name
+        }));
+        
+        setDisplayTags(tags);
+      } catch (err) {
+        console.warn('Erro ao buscar tags do perfil:', err);
+        setDisplayTags([]);
+      }
+    }
+
+    fetchProfileTags();
+  }, [player?.id]);
+
+  // Fetch tags conquistadas (apenas se pode editar)
+  useEffect(() => {
+    async function fetchEarnedTags() {
+      if (!player || !canEditTags || !showTagsEdit) {
+        return;
+      }
+
+      try {
+        setTagsLoading(true);
+        
+        // Buscar tags conquistadas
+        const { data: earnedData, error: earnedError } = await supabase
+          .from('player_tags')
+          .select(`
+            tag_id,
+            tags!inner(id, name, description)
+          `)
+          .eq('player_id', player.id);
+
+        if (earnedError) throw earnedError;
+
+        const tags = (earnedData || []).map(item => ({
+          id: (item.tags as any).id,
+          name: (item.tags as any).name,
+          description: (item.tags as any).description
+        }));
+        
+        setEarnedTags(tags);
+
+        // Buscar tags atualmente exibidas
+        const { data: profileData, error: profileError } = await supabase
+          .from('player_profile_tags')
+          .select('tag_id')
+          .eq('player_id', player.id);
+
+        if (profileError) throw profileError;
+
+        setProfileTags((profileData || []).map(item => item.tag_id));
+      } catch (err) {
+        console.warn('Erro ao buscar tags:', err);
+      } finally {
+        setTagsLoading(false);
+      }
+    }
+
+    fetchEarnedTags();
+  }, [player?.id, canEditTags, showTagsEdit]);
+
+  // Função para adicionar tag ao perfil
+  const handleAddTag = async (tagId: string) => {
+    if (!player || profileTags.length >= 3) return;
+
+    try {
+      const { error } = await supabase
+        .from('player_profile_tags')
+        .insert({ player_id: player.id, tag_id: tagId });
+
+      if (error) throw error;
+
+      setProfileTags([...profileTags, tagId]);
+      
+      // Atualizar displayTags
+      const tag = earnedTags.find(t => t.id === tagId);
+      if (tag) {
+        setDisplayTags([...displayTags, { tag_id: tagId, tag_name: tag.name }]);
+      }
+    } catch (err: any) {
+      console.error('Erro ao adicionar tag:', err);
+      alert(err.message || 'Erro ao adicionar tag');
+    }
+  };
+
+  // Função para remover tag do perfil
+  const handleRemoveTag = async (tagId: string) => {
+    if (!player) return;
+
+    try {
+      const { error } = await supabase
+        .from('player_profile_tags')
+        .delete()
+        .eq('player_id', player.id)
+        .eq('tag_id', tagId);
+
+      if (error) throw error;
+
+      setProfileTags(profileTags.filter(id => id !== tagId));
+      setDisplayTags(displayTags.filter(tag => tag.tag_id !== tagId));
+    } catch (err: any) {
+      console.error('Erro ao remover tag:', err);
+      alert(err.message || 'Erro ao remover tag');
+    }
+  };
 
   // Fetch tournament history quando showHistory mudar
   useEffect(() => {
@@ -199,8 +347,8 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
   };
 
   return player ? (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="card-base w-full max-w-md relative overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[110] p-4" onClick={onClose}>
+      <div className="card-base w-full max-w-md relative overflow-hidden max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -239,6 +387,20 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
             <h2 className="text-2xl font-heading font-bold text-neon-blue mb-2">
               {player.nick}
             </h2>
+
+            {/* Tags do Perfil */}
+            {displayTags.length > 0 && (
+              <div className="flex flex-wrap gap-2 justify-center mb-3">
+                {displayTags.map((tag) => (
+                  <span
+                    key={tag.tag_id}
+                    className="px-3 py-1 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/30 rounded-full text-xs font-semibold text-cyan-300"
+                  >
+                    {tag.tag_name}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* Rating */}
             <div className="flex items-center gap-2 mb-4">
@@ -329,6 +491,17 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
               <History size={18} />
               {showHistory ? 'Ocultar Histórico' : 'Ver Histórico de Participações'}
             </button>
+
+            {/* Botão Gerenciar Tags */}
+            {canEditTags && (
+              <button
+                onClick={() => setShowTagsEdit(true)}
+                className="btn-secondary w-full mb-4 flex items-center justify-center gap-2"
+              >
+                <Star size={18} />
+                Gerenciar Tags
+              </button>
+            )}
 
             {/* Histórico de Participações */}
             {showHistory && (
@@ -441,6 +614,108 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
             </button>
           </div>
         </div>
+
+        {/* Modal de Edição de Tags */}
+        {showTagsEdit && canEditTags && (
+          <div
+            className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-20"
+            onClick={() => setShowTagsEdit(false)}
+          >
+            <div
+              className="card-base w-full max-w-md max-h-[80vh] overflow-y-auto p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-heading font-bold text-neon-blue">
+                  Gerenciar Tags
+                </h3>
+                <button
+                  onClick={() => setShowTagsEdit(false)}
+                  className="p-1 hover:bg-muted rounded-lg transition-colors"
+                >
+                  <X size={20} className="text-muted-foreground" />
+                </button>
+              </div>
+
+              <p className="text-sm text-muted-foreground mb-4">
+                Selecione até 3 tags para exibir no seu perfil. Apenas tags conquistadas podem ser exibidas.
+              </p>
+
+              <div className="space-y-2">
+                {tagsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Carregando tags...</p>
+                  </div>
+                ) : earnedTags.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Você ainda não conquistou nenhuma tag.
+                  </p>
+                ) : (
+                  earnedTags.map((tag) => {
+                    const isSelected = profileTags.includes(tag.id);
+                    const canSelect = !isSelected && profileTags.length < 3;
+
+                    return (
+                      <div
+                        key={tag.id}
+                        className={`p-3 rounded-lg border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-cyan-500/20 border-cyan-400/50'
+                            : canSelect
+                            ? 'bg-muted/30 border-border hover:border-cyan-400/30'
+                            : 'bg-muted/10 border-border/50 opacity-50 cursor-not-allowed'
+                        }`}
+                        onClick={() => {
+                          if (isSelected) {
+                            handleRemoveTag(tag.id);
+                          } else if (canSelect) {
+                            handleAddTag(tag.id);
+                          }
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-semibold text-foreground text-sm">
+                              {tag.name}
+                            </p>
+                            {tag.description && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {tag.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="ml-3">
+                            {isSelected ? (
+                              <span className="text-cyan-400">✓</span>
+                            ) : canSelect ? (
+                              <span className="text-muted-foreground">○</span>
+                            ) : (
+                              <span className="text-muted-foreground/50">○</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="mt-4 p-3 bg-muted/30 border border-border rounded-lg">
+                <p className="text-xs text-muted-foreground text-center">
+                  {profileTags.length} / 3 tags selecionadas
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowTagsEdit(false)}
+                className="btn-primary w-full mt-4"
+              >
+                Concluído
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   ) : null;

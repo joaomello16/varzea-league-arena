@@ -1,8 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Player } from '@/lib/supabase';
 import { supabase } from '@/lib/supabase';
-import { X, Upload, User as UserIcon } from 'lucide-react';
+import { X, Upload, User as UserIcon, Tags } from 'lucide-react';
 import { ImageCropper } from './ImageCropper';
+import { useAuth } from '@/contexts/AuthContext';
+
+// Tipos para tags
+interface Tag {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+interface ProfileTag {
+  tag_id: string;
+  tag_name: string;
+}
 
 interface PlayerEditModalProps {
   player: Player;
@@ -15,6 +28,7 @@ export function PlayerEditModal({
   onClose,
   onSaveSuccess,
 }: PlayerEditModalProps) {
+  const { user, isAdmin } = useAuth();
   const [nick, setNick] = useState(player.nick);
   const [bio, setBio] = useState(player.bio || '');
   const [avatarPreview, setAvatarPreview] = useState<string | null>(
@@ -31,6 +45,133 @@ export function PlayerEditModal({
   const [showAvatarCropper, setShowAvatarCropper] = useState(false);
   const [showCoverCropper, setShowCoverCropper] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+
+  // Estados para tags
+  const [earnedTags, setEarnedTags] = useState<Tag[]>([]);
+  const [profileTags, setProfileTags] = useState<string[]>([]); // IDs das tags exibidas
+  const [displayTags, setDisplayTags] = useState<ProfileTag[]>([]); // Tags para exibir no perfil público
+  const [showTagsEdit, setShowTagsEdit] = useState(false);
+  const [tagsLoading, setTagsLoading] = useState(false);
+  
+  const canEditTags = user && (player?.user_id === user.id || isAdmin);
+
+  // Fetch tags do perfil (sempre)
+  useEffect(() => {
+    async function fetchProfileTags() {
+      if (!player) {
+        setDisplayTags([]);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('player_profile_tags')
+          .select(`
+            tag_id,
+            tags!inner(name)
+          `)
+          .eq('player_id', player.id);
+
+        if (error) throw error;
+
+        const tags = (data || []).map(item => ({
+          tag_id: item.tag_id,
+          tag_name: (item.tags as any).name
+        }));
+        
+        setDisplayTags(tags);
+        setProfileTags(tags.map(t => t.tag_id));
+      } catch (err) {
+        console.warn('Erro ao buscar tags do perfil:', err);
+        setDisplayTags([]);
+      }
+    }
+
+    fetchProfileTags();
+  }, [player?.id]);
+
+  // Fetch tags conquistadas (apenas se pode editar e modal está aberto)
+  useEffect(() => {
+    async function fetchEarnedTags() {
+      if (!player || !canEditTags || !showTagsEdit) {
+        return;
+      }
+
+      try {
+        setTagsLoading(true);
+        
+        // Buscar tags conquistadas
+        const { data: earnedData, error: earnedError } = await supabase
+          .from('player_tags')
+          .select(`
+            tag_id,
+            tags!inner(id, name, description)
+          `)
+          .eq('player_id', player.id);
+
+        if (earnedError) throw earnedError;
+
+        const tags = (earnedData || []).map(item => ({
+          id: (item.tags as any).id,
+          name: (item.tags as any).name,
+          description: (item.tags as any).description
+        }));
+        
+        setEarnedTags(tags);
+      } catch (err) {
+        console.warn('Erro ao buscar tags:', err);
+      } finally {
+        setTagsLoading(false);
+      }
+    }
+
+    fetchEarnedTags();
+  }, [player?.id, canEditTags, showTagsEdit]);
+
+  // Função para adicionar tag ao perfil
+  const handleAddTag = async (tagId: string) => {
+    if (!player || profileTags.length >= 3) return;
+
+    try {
+      const { error } = await supabase
+        .from('player_profile_tags')
+        .insert({ player_id: player.id, tag_id: tagId });
+
+      if (error) throw error;
+
+      setProfileTags([...profileTags, tagId]);
+      
+      // Atualizar displayTags
+      const tag = earnedTags.find(t => t.id === tagId);
+      if (tag) {
+        setDisplayTags([...displayTags, { tag_id: tagId, tag_name: tag.name }]);
+      }
+    } catch (err: any) {
+      console.error('Erro ao adicionar tag:', err);
+      setError(err.message || 'Erro ao adicionar tag');
+    }
+  };
+
+  // Função para remover tag do perfil
+  const handleRemoveTag = async (tagId: string) => {
+    if (!player) return;
+
+    try {
+      const { error } = await supabase
+        .from('player_profile_tags')
+        .delete()
+        .eq('player_id', player.id)
+        .eq('tag_id', tagId);
+
+      if (error) throw error;
+
+      setProfileTags(profileTags.filter(id => id !== tagId));
+      setDisplayTags(displayTags.filter(tag => tag.tag_id !== tagId));
+    } catch (err: any) {
+      console.error('Erro ao remover tag:', err);
+      setError(err.message || 'Erro ao remover tag');
+    }
+  };
 
   const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -311,6 +452,43 @@ export function PlayerEditModal({
               </p>
             </div>
 
+            {/* Tags Section */}
+            {canEditTags && (
+              <div className="w-full mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-heading font-semibold text-muted-foreground uppercase tracking-wider">
+                    Tags do Perfil
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowTagsEdit(true)}
+                    className="text-xs btn-secondary py-1 px-3 flex items-center gap-1"
+                  >
+                    <Tags size={14} />
+                    Gerenciar Tags
+                  </button>
+                </div>
+                
+                {/* Display Tags */}
+                {displayTags.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {displayTags.map((tag) => (
+                      <span
+                        key={tag.tag_id}
+                        className="px-3 py-1.5 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/30 rounded-full text-sm font-semibold text-cyan-300"
+                      >
+                        {tag.tag_name}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Nenhuma tag selecionada (máx. 3)
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Buttons */}
             <div className="flex gap-2 w-full">
               <button
@@ -365,6 +543,109 @@ export function PlayerEditModal({
             setImageToCrop(null);
           }}
         />
+      )}
+
+      {/* Tags Edit Modal */}
+      {showTagsEdit && canEditTags && (
+        <div 
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4"
+          onClick={() => setShowTagsEdit(false)}
+        >
+          <div 
+            className="card-base w-full max-w-md p-6 max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-foreground">Gerenciar Tags</h3>
+              <button
+                onClick={() => setShowTagsEdit(false)}
+                className="p-1 hover:bg-muted rounded-lg transition-colors"
+              >
+                <X size={20} className="text-muted-foreground" />
+              </button>
+            </div>
+
+            <p className="text-sm text-muted-foreground mb-4">
+              Selecione até 3 tags para exibir no seu perfil:
+            </p>
+
+            {/* Max tags warning */}
+            {profileTags.length >= 3 && (
+              <div className="card-base p-3 bg-yellow-500/10 border-yellow-500/30 mb-4">
+                <p className="text-xs text-yellow-400">
+                  ⚠️ Máximo de 3 tags atingido. Remova uma tag para adicionar outra.
+                </p>
+              </div>
+            )}
+
+            {/* Loading */}
+            {tagsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : earnedTags.length === 0 ? (
+              <div className="card-base p-6 text-center">
+                <Tags size={32} className="mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Você ainda não conquistou nenhuma tag.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {earnedTags.map((tag) => {
+                  const isSelected = profileTags.includes(tag.id);
+                  return (
+                    <div
+                      key={tag.id}
+                      className={`card-base p-3 cursor-pointer transition-all ${
+                        isSelected
+                          ? 'bg-cyan-500/20 border-cyan-400/50'
+                          : 'hover:border-muted'
+                      }`}
+                      onClick={() => {
+                        if (isSelected) {
+                          handleRemoveTag(tag.id);
+                        } else if (profileTags.length < 3) {
+                          handleAddTag(tag.id);
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <p className="font-semibold text-foreground mb-1">
+                            {tag.name}
+                          </p>
+                          {tag.description && (
+                            <p className="text-xs text-muted-foreground">
+                              {tag.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex-shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {}} // Controlled by parent div click
+                            className="w-5 h-5 rounded border-border"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Close button */}
+            <button
+              onClick={() => setShowTagsEdit(false)}
+              className="btn-primary w-full mt-4"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

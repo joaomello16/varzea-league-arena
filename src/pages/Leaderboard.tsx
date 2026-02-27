@@ -40,6 +40,11 @@ interface PlayerTitle {
   title_label: string;
 }
 
+// Tipos para tags
+interface PlayerTag {
+  tag_name: string;
+}
+
 function PlayerCard({
   player,
   rank,
@@ -179,12 +184,14 @@ function RankingRow({
   isSelected,
   onClick,
   activeTab,
+  tags = [],
 }: {
   player: Player;
   rank: number;
   isSelected: boolean;
   onClick: () => void;
   activeTab: 'rating' | 'kills' | 'position';
+  tags?: PlayerTag[];
 }) {
   const isTop3 = rank <= 3;
   
@@ -257,6 +264,19 @@ function RankingRow({
         >
           {player.nick}
         </p>
+        {/* Tags */}
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1">
+            {tags.map((tag, index) => (
+              <span
+                key={index}
+                className="px-2 py-0.5 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/30 rounded-full text-xs font-semibold text-cyan-300"
+              >
+                {tag.tag_name}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Value - Dynamic based on active tab */}
@@ -308,6 +328,7 @@ export default function Leaderboard() {
   const [seasonInfo, setSeasonInfo] = useState<{ name: string; endDate: string | null; active: boolean } | null>(null);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
+  const [playerTags, setPlayerTags] = useState<Map<string, PlayerTag[]>>(new Map());
   const pageSize = 10;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -461,6 +482,31 @@ export default function Leaderboard() {
         setPlayers(enrichedPlayers);
         if (enrichedPlayers.length > 0) {
           setSelectedPlayer(enrichedPlayers[0]);
+        }
+
+        // 6. Buscar tags dos jogadores
+        if (leaderboardPlayerIds.length > 0) {
+          const { data: tagsData } = await supabase
+            .from('player_profile_tags')
+            .select(`
+              player_id,
+              tags!inner(name)
+            `)
+            .in('player_id', leaderboardPlayerIds);
+
+          if (tagsData) {
+            const tagsMap = new Map<string, PlayerTag[]>();
+            tagsData.forEach((item) => {
+              const playerId = item.player_id;
+              if (!tagsMap.has(playerId)) {
+                tagsMap.set(playerId, []);
+              }
+              tagsMap.get(playerId)!.push({
+                tag_name: (item.tags as any).name
+              });
+            });
+            setPlayerTags(tagsMap);
+          }
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -694,6 +740,7 @@ export default function Leaderboard() {
                     rank={(page - 1) * pageSize + index + 1}
                     isSelected={selectedPlayer?.id === player.id}
                     activeTab={activeTab}
+                    tags={playerTags.get(player.id) || []}
                     onClick={() => {
                       setSelectedPlayer(player);
                       setIsMobileModalOpen(true);

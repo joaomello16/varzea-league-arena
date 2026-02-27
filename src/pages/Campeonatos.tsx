@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { PlayerProfileModal } from '@/components/PlayerProfileModal';
 
 // Tipos para as views do Supabase
 interface Season {
@@ -182,10 +183,12 @@ function TournamentDetailModal({
   tournamentId,
   onClose,
   onParticipantsAdded,
+  onPlayerClick,
 }: {
   tournamentId: string;
   onClose: () => void;
   onParticipantsAdded?: () => void;
+  onPlayerClick: (player: { id: string; nick: string; avatar_url: string | null }) => void;
 }) {
   const [tournamentInfo, setTournamentInfo] = useState<TournamentDetailRow | null>(null);
   const [podiumPlayers, setPodiumPlayers] = useState<TournamentPodiumPlayer[]>([]);
@@ -312,10 +315,17 @@ function TournamentDetailModal({
           {tournamentInfo.mvp_nick && (
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">MVP</p>
-              <div className="flex items-center gap-3">
+              <button
+                onClick={() => onPlayerClick({
+                  id: tournamentInfo.mvp_player_id!,
+                  nick: tournamentInfo.mvp_nick!,
+                  avatar_url: tournamentInfo.mvp_avatar_url,
+                })}
+                className="flex items-center gap-3 hover:bg-muted/30 p-2 rounded-lg transition-colors cursor-pointer"
+              >
                 <PlayerAvatar name={tournamentInfo.mvp_nick} avatarUrl={tournamentInfo.mvp_avatar_url} size="md" />
                 <p className="text-sm font-heading font-semibold text-neon-yellow">{tournamentInfo.mvp_nick}</p>
-              </div>
+              </button>
             </div>
           )}
 
@@ -325,16 +335,21 @@ function TournamentDetailModal({
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-4 font-semibold">Pódio</p>
               <div className="space-y-3">
                 {podiumPlayers.map((player) => (
-                  <div
+                  <button
                     key={player.player_id}
-                    className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border hover:border-primary/50 transition-colors"
+                    onClick={() => onPlayerClick({
+                      id: player.player_id,
+                      nick: player.nick,
+                      avatar_url: player.avatar_url,
+                    })}
+                    className="w-full flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border hover:border-primary/50 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-4">
                       <span className={`text-3xl ${positionColors[player.position as 1 | 2 | 3]}`}>
                         {positionEmoji[player.position as 1 | 2 | 3]}
                       </span>
                       <PlayerAvatar name={player.nick} avatarUrl={player.avatar_url} size="md" />
-                      <div>
+                      <div className="text-left">
                         <p className="font-semibold text-foreground">{player.nick}</p>
                         <p className="text-xs text-muted-foreground">
                           {player.position === 1
@@ -349,7 +364,7 @@ function TournamentDetailModal({
                       <p className="text-sm font-bold text-accent">{player.kills}</p>
                       <p className="text-xs text-muted-foreground">kills</p>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -1465,6 +1480,7 @@ export default function Campeonatos() {
   const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedPlayerForProfile, setSelectedPlayerForProfile] = useState<any>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -1545,6 +1561,28 @@ export default function Campeonatos() {
     fetchTournaments();
   };
 
+  // Handle player click - fetch full player data
+  const handlePlayerClick = async (playerInfo: { id: string; nick: string; avatar_url: string | null }) => {
+    try {
+      const { data, error } = await supabase
+        .from('players')
+        .select('*')
+        .eq('id', playerInfo.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching player data:', error);
+        return;
+      }
+
+      if (data) {
+        setSelectedPlayerForProfile(data);
+      }
+    } catch (error) {
+      console.error('Error fetching player data:', error);
+    }
+  };
+
   // Filter tournaments when season selection changes
   useEffect(() => {
     if (selectedSeasonId === 'all') {
@@ -1623,6 +1661,7 @@ export default function Campeonatos() {
           <TournamentDetailModal
             tournamentId={selectedTournamentId}
             onClose={() => setSelectedTournamentId(null)}
+            onPlayerClick={handlePlayerClick}
           />
         )}
 
@@ -1630,6 +1669,13 @@ export default function Campeonatos() {
           <CreateTournamentModal
             onClose={() => setShowCreateModal(false)}
             onSuccess={handleTournamentCreated}
+          />
+        )}
+
+        {selectedPlayerForProfile && (
+          <PlayerProfileModal
+            player={selectedPlayerForProfile as any}
+            onClose={() => setSelectedPlayerForProfile(null)}
           />
         )}
       </div>
