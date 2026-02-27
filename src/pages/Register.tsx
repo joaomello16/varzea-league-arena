@@ -3,7 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { PlayerSelect } from '@/components/PlayerSelect';
 import { PlayerRequestModal } from '@/components/PlayerRequestModal';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, User, Users } from 'lucide-react';
 import logo from '@/assets/varzealogo.png';
 
 export default function Register() {
@@ -20,6 +20,8 @@ export default function Register() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPlayerRequestOpen, setIsPlayerRequestOpen] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
+  const [userType, setUserType] = useState<'player' | 'visitor' | null>(null);
+  const [showUserTypeSelection, setShowUserTypeSelection] = useState(true);
 
   if (loading) {
     return null;
@@ -43,7 +45,8 @@ export default function Register() {
       return;
     }
 
-    if (!selectedPlayerId && !requestSent) {
+    // Validação de player apenas se o tipo for 'player'
+    if (userType === 'player' && !selectedPlayerId && !requestSent) {
       setError('Selecione um player ou envie uma solicitação');
       return;
     }
@@ -70,6 +73,10 @@ export default function Register() {
     setRequestSent(true);
   };
 
+  const handleUserTypeSelect = (type: 'player' | 'visitor') => {
+    setUserType(type);
+    setShowUserTypeSelection(false);
+  };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
@@ -79,134 +86,201 @@ export default function Register() {
         </div>
         
         <div className="card-base p-8">
-          <h1 className="text-2xl font-heading font-bold text-center mb-6 text-neon-blue">
-            Criar Conta
-          </h1>
+          {showUserTypeSelection ? (
+            <>
+              <h1 className="text-2xl font-heading font-bold text-center mb-6 text-neon-blue">
+                Criar Conta
+              </h1>
+              
+              <p className="text-center text-muted-foreground mb-6">
+                Escolha como deseja se registrar:
+              </p>
+
+              <div className="space-y-4">
+                <button
+                  onClick={() => handleUserTypeSelect('player')}
+                  className="w-full p-6 rounded-lg border-2 border-border hover:border-primary/50 transition-all bg-card hover:bg-muted/50 flex flex-col items-center gap-3 group"
+                >
+                  <Users size={48} className="text-neon-blue group-hover:text-primary transition-colors" />
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground mb-1">
+                      Sou jogador de Bullet Echo
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Vincule sua conta a um perfil de jogador
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handleUserTypeSelect('visitor')}
+                  className="w-full p-6 rounded-lg border-2 border-border hover:border-primary/50 transition-all bg-card hover:bg-muted/50 flex flex-col items-center gap-3 group"
+                >
+                  <User size={48} className="text-cyan-400 group-hover:text-cyan-300 transition-colors" />
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground mb-1">
+                      Sou visitante
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Apenas acompanhar o conteúdo da liga
+                    </p>
+                  </div>
+                </button>
+              </div>
+
+              <p className="text-center text-muted-foreground mt-6">
+                Já tem uma conta?{' '}
+                <Link to="/login" className="text-primary hover:underline">
+                  Entrar
+                </Link>
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-heading font-bold text-neon-blue">
+                  {userType === 'player' ? 'Criar Conta - Jogador' : 'Criar Conta - Visitante'}
+                </h1>
+                <button
+                  onClick={() => {
+                    setShowUserTypeSelection(true);
+                    setUserType(null);
+                    setError(null);
+                  }}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Voltar
+                </button>
+              </div>
           
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="nick" className="block text-sm font-medium text-muted-foreground mb-2">
-                Nome de Usuario
-              </label>
-              <input
-                id="nick"
-                type="text"
-                value={nick}
-                onChange={(e) => setNick(e.target.value)}
-                className="input-base"
-                placeholder="Usuario para o site"
-                required
-                minLength={3}
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-muted-foreground mb-2">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input-base"
-                placeholder="seu@email.com"
-                required
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-muted-foreground mb-2">
-                Senha
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="input-base pr-10"
-                  placeholder="••••••••"
-                  required
-                  minLength={6}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-            </div>
-            
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-muted-foreground mb-2">
-                Confirmar Senha
-              </label>
-              <div className="relative">
-                <input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="input-base pr-10"
-                  placeholder="••••••••"
-                  required
-                  minLength={6}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
-                >
-                  {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-muted/50 p-3 rounded-md border border-border">
-              <PlayerSelect
-                selectedPlayerId={selectedPlayerId}
-                onSelect={handlePlayerSelect}
-                onPlayerNotFound={() => setIsPlayerRequestOpen(true)}
-              />
-
-              {requestSent && (
-                <div className="mt-3 p-2 bg-green-900/20 border border-green-900/30 rounded text-sm text-green-600 flex items-center gap-2">
-                  ✓ Solicitação enviada com sucesso
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="nick" className="block text-sm font-medium text-muted-foreground mb-2">
+                    Nome de Usuario
+                  </label>
+                  <input
+                    id="nick"
+                    type="text"
+                    value={nick}
+                    onChange={(e) => setNick(e.target.value)}
+                    className="input-base"
+                    placeholder="Usuario para o site"
+                    required
+                    minLength={3}
+                  />
                 </div>
-              )}
-            </div>
-            
-            {error && (
-              <p className="text-destructive text-sm text-center">{error}</p>
-            )}
-            
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="btn-primary w-full flex items-center justify-center gap-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                  Criando conta...
-                </>
-              ) : (
-                'Criar Conta'
-              )}
-            </button>
-          </form>
-          
-          <p className="text-center text-muted-foreground mt-6">
-            Já tem uma conta?{' '}
-            <Link to="/login" className="text-primary hover:underline">
-              Entrar
-            </Link>
-          </p>
+                
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-muted-foreground mb-2">
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="input-base"
+                    placeholder="seu@email.com"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-muted-foreground mb-2">
+                    Senha
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="input-base pr-10"
+                      placeholder="••••••••"
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    >
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  </div>
+                </div>
+                
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-muted-foreground mb-2">
+                    Confirmar Senha
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="input-base pr-10"
+                      placeholder="••••••••"
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
+                    >
+                      {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  </div>
+                </div>
+
+                {userType === 'player' && (
+                  <div className="bg-muted/50 p-3 rounded-md border border-border">
+                    <PlayerSelect
+                      selectedPlayerId={selectedPlayerId}
+                      onSelect={handlePlayerSelect}
+                      onPlayerNotFound={() => setIsPlayerRequestOpen(true)}
+                    />
+
+                    {requestSent && (
+                      <div className="mt-3 p-2 bg-green-900/20 border border-green-900/30 rounded text-sm text-green-600 flex items-center gap-2">
+                        ✓ Solicitação enviada com sucesso
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {error && (
+                  <p className="text-destructive text-sm text-center">{error}</p>
+                )}
+                
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="btn-primary w-full flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                      Criando conta...
+                    </>
+                  ) : (
+                    'Criar Conta'
+                  )}
+                </button>
+              </form>
+              
+              <p className="text-center text-muted-foreground mt-6">
+                Já tem uma conta?{' '}
+                <Link to="/login" className="text-primary hover:underline">
+                  Entrar
+                </Link>
+              </p>
+            </>
+          )}
         </div>
       </div>
 
@@ -218,4 +292,3 @@ export default function Register() {
     </div>
   );
 }
-

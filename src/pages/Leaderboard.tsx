@@ -43,6 +43,9 @@ interface PlayerTitle {
 // Tipos para tags
 interface PlayerTag {
   tag_name: string;
+  category?: string | null;
+  placement?: number | null;
+  season_number?: number | null;
 }
 
 function PlayerCard({
@@ -51,12 +54,16 @@ function PlayerCard({
   titles = [],
   onEditClick,
   activeTab,
+  tags = [],
+  onClose,
 }: {
   player: Player;
   rank: number;
   titles?: PlayerTitle[];
   onEditClick?: () => void;
   activeTab: 'rating' | 'kills' | 'position';
+  tags?: PlayerTag[];
+  onClose?: () => void;
 }) {
   const canEdit = useCanEditPlayer(player);
 
@@ -127,6 +134,52 @@ function PlayerCard({
           {player.bio || '—'}
         </p>
 
+        {/* Tags */}
+        {tags.length > 0 && (
+          <div className="w-full mb-6">
+            <h3 className="text-sm font-heading font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
+              Tags
+            </h3>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {tags.map((tag, index) => {
+                // Define ícone baseado na categoria
+                let TagIcon = null;
+                if (tag.category === 'kills') {
+                  TagIcon = GiCrownedSkull;
+                } else if (tag.category === 'position points') {
+                  TagIcon = GiLaurelCrown;
+                } else if (tag.category === 'rating') {
+                  TagIcon = GiImperialCrown;
+                }
+
+                // Define cor baseada no placement
+                let colorClasses = 'text-cyan-300';
+                if (tag.placement === 1) {
+                  colorClasses = 'text-yellow-300/90';
+                } else if (tag.placement === 2) {
+                  colorClasses = 'text-cyan-200/80';
+                } else if (tag.placement === 3) {
+                  colorClasses = 'text-slate-300';
+                }
+
+                // Verifica se tem números na tag
+                const tagHasNumbers = /\d/.test(tag.tag_name);
+
+                return (
+                  <span
+                    key={index}
+                    className={`px-3 py-1.5 rounded-full text-sm flex items-center gap-2 ${colorClasses}`}
+                    style={tagHasNumbers ? {} : { fontFamily: 'Anaphora', fontVariantLigatures: 'none', fontFeatureSettings: 'normal' }}
+                  >
+                    {TagIcon && <TagIcon size={18} />}
+                    {tag.tag_name}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Titles */}
         <div className="w-full mb-6">
           <h3 className="text-sm font-heading font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
@@ -173,6 +226,16 @@ function PlayerCard({
             Editar Perfil
           </button>
         )}
+
+        {/* Close Button - Mobile only */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="btn-secondary w-full flex items-center justify-center gap-2 mt-3"
+          >
+            Fechar
+          </button>
+        )}
       </div>
     </div>
   );
@@ -201,7 +264,7 @@ function RankingRow({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-4 p-4 rounded-lg transition-all bg-gradient-to-l from-blue-950/25 via-black via-25% to-black border ${rank === 1
+      className={`w-full flex items-center gap-4 px-4 py-4 pb-6 rounded-lg transition-all bg-gradient-to-l from-blue-950/25 via-black via-25% to-black border ${rank === 1
           ? 'border-yellow-500/40'
           : isSelected
           ? 'border-slate-600/60'
@@ -258,23 +321,66 @@ function RankingRow({
       {/* Info */}
       <div className="flex-1 text-left">
         <p
-          className={`font-semibold ${rank === 1 ? 'text-neon-yellow' : 'text-foreground'
+          className={`font-semibold ${tags.length === 0 ? 'mb-3' : ''} ${rank === 1 ? 'text-neon-yellow' : 'text-foreground'
             }`}
           style={hasNumbers ? {} : { fontFamily: 'Anaphora', fontVariantLigatures: 'none', fontFeatureSettings: 'normal' }}
         >
           {player.nick}
         </p>
-        {/* Tags */}
+        {/* Tags - apenas ícones com badge da temporada */}
         {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
-            {tags.map((tag, index) => (
-              <span
-                key={index}
-                className="px-2 py-0.5 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/30 rounded-full text-xs font-semibold text-cyan-300"
-              >
-                {tag.tag_name}
-              </span>
-            ))}
+          <div className="flex gap-2 mt-1">
+            {tags
+              .sort((a, b) => (a.placement ?? 999) - (b.placement ?? 999)) // Ordenar por placement (menor primeiro)
+              .slice(0, 1) // Pegar apenas a primeira
+              .map((tag, index) => {
+              // Define ícone baseado na categoria
+              let TagIcon = null;
+              if (tag.category === 'kills') {
+                TagIcon = GiCrownedSkull;
+              } else if (tag.category === 'position points') {
+                TagIcon = GiLaurelCrown;
+              } else if (tag.category === 'rating') {
+                TagIcon = GiImperialCrown;
+              }
+
+              // Define cor baseada no placement
+              let colorClasses = 'text-cyan-200/60 border-cyan-400/40';
+              if (tag.placement === 1) {
+                colorClasses = 'text-yellow-300/70 border-yellow-400/50';
+              } else if (tag.placement === 2) {
+                colorClasses = 'text-cyan-200/60 border-cyan-400/40';
+              } else if (tag.placement === 3) {
+                colorClasses = 'text-slate-300/70 border-slate-400/40';
+              }
+
+              return (
+                TagIcon && (
+                  <div key={index} className="flex flex-col items-center gap-0">
+                    {/* Card com ícone + #placement */}
+                    <div 
+                      className={`flex items-center gap-0.5 px-1 py-0.5 border rounded ${colorClasses.split(' ')[1]}`}
+                    >
+                      <span className={colorClasses.split(' ')[0]}>
+                        <TagIcon size={14} />
+                      </span>
+                      {tag.placement && (
+                        <span className={`text-[10px] font-light tracking-tight ${colorClasses.split(' ')[0]}`} style={{ fontFamily: 'system-ui, sans-serif' }}>
+                          #{tag.placement}
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Season fora do card */}
+                    {tag.season_number && (
+                      <span className={`text-[7px] font-light tracking-tighter ${colorClasses.split(' ')[0]} mt-0.5`} style={{ fontFamily: 'system-ui, sans-serif', letterSpacing: '0.5px' }}>
+                        S{tag.season_number}
+                      </span>
+                    )}
+                  </div>
+                )
+              );
+            })}
           </div>
         )}
       </div>
@@ -422,6 +528,8 @@ export default function Leaderboard() {
         // 2. Buscar leaderboard da temporada ativa com paginação (limitado aos 20 melhores)
         const leaderboardMap = new Map<string, LeaderboardEntry>();
         let leaderboardPlayerIds: string[] = [];
+        let useDefaultOrder = false; // Flag para indicar se deve usar ordenação padrão
+        
         if (seasonId) {
           // Define qual coluna ordenar baseado na aba ativa
           const orderColumn = activeTab === 'rating' ? 'rating' : activeTab === 'kills' ? 'total_kills' : 'total_position_points';
@@ -435,7 +543,7 @@ export default function Leaderboard() {
 
           if (leaderboardError) {
             console.warn('Erro ao buscar leaderboard:', leaderboardError);
-          } else {
+          } else if (leaderboardData && leaderboardData.length > 0) {
             // Define total como 20 no máximo
             const allEntries = leaderboardData || [];
             setTotalCount(Math.min(allEntries.length, 20));
@@ -446,38 +554,92 @@ export default function Leaderboard() {
               leaderboardMap.set(entry.player_id, entry);
               leaderboardPlayerIds.push(entry.player_id);
             });
+          } else {
+            // Não há dados de leaderboard para esta season - usar ordenação padrão
+            useDefaultOrder = true;
           }
         }
 
-        // 3. Buscar apenas os players da página atual
-        const { data: playersData, error: playersError } = await supabase
-          .from('players')
-          .select('*')
-          .in('id', leaderboardPlayerIds.length > 0 ? leaderboardPlayerIds : ['']);
+        let enrichedPlayers: Player[] = [];
 
-        if (playersError) {
-          setError(playersError.message);
-          setLoading(false);
-          return;
-        }
+        if (useDefaultOrder) {
+          // 3a. Nova season sem participações - buscar todos os players e ordenar por critérios padrão
+          const { data: allPlayersData, error: allPlayersError } = await supabase
+            .from('players')
+            .select('*');
 
-        // 4. Merge: combinar dados de players com leaderboard
-        const enrichedPlayers: Player[] = (playersData || [])
-          .map((player) => {
-            const leaderboardEntry = leaderboardMap.get(player.id);
-            return {
-              ...player,
-              rating: leaderboardEntry?.rating ?? 0,
-              total_kills: leaderboardEntry?.total_kills ?? 0,
-              total_position_points: leaderboardEntry?.total_position_points ?? 0,
-            };
-          })
-          // 5. Manter ordem do leaderboard
-          .sort((a, b) => {
-            const indexA = leaderboardPlayerIds.indexOf(a.id);
-            const indexB = leaderboardPlayerIds.indexOf(b.id);
-            return indexA - indexB;
+          if (allPlayersError) {
+            setError(allPlayersError.message);
+            setLoading(false);
+            return;
+          }
+
+          // Ordenar players por critérios (mesma lógica do AdminPlayers):
+          // 1. Vinculação ativa (user_id não null) primeiro
+          // 2. "Estilo" - quantidade de elementos preenchidos (avatar, cover, bio)
+          const sortedPlayers = (allPlayersData || []).sort((a, b) => {
+            // Critério 1: Vinculação ativa
+            const aHasUser = a.user_id ? 1 : 0;
+            const bHasUser = b.user_id ? 1 : 0;
+            
+            if (aHasUser !== bHasUser) {
+              return bHasUser - aHasUser; // Vinculados primeiro
+            }
+
+            // Critério 2: Pontuação de "estilo"
+            const aStyleScore = (a.avatar_url ? 1 : 0) + (a.cover_url ? 1 : 0) + (a.bio ? 1 : 0);
+            const bStyleScore = (b.avatar_url ? 1 : 0) + (b.cover_url ? 1 : 0) + (b.bio ? 1 : 0);
+            
+            return bStyleScore - aStyleScore; // Maior pontuação primeiro
           });
+
+          // Limitar aos 20 primeiros
+          const top20Players = sortedPlayers.slice(0, 20);
+          setTotalCount(Math.min(top20Players.length, 20));
+
+          // Aplicar paginação
+          const paginatedPlayers = top20Players.slice(from, to + 1);
+          
+          // Adicionar estatísticas zeradas e criar IDs para buscar tags
+          enrichedPlayers = paginatedPlayers.map((player) => ({
+            ...player,
+            rating: 0,
+            total_kills: 0,
+            total_position_points: 0,
+          }));
+
+          leaderboardPlayerIds = paginatedPlayers.map(p => p.id);
+        } else {
+          // 3b. Buscar apenas os players da página atual (modo normal com leaderboard)
+          const { data: playersData, error: playersError } = await supabase
+            .from('players')
+            .select('*')
+            .in('id', leaderboardPlayerIds.length > 0 ? leaderboardPlayerIds : ['']);
+
+          if (playersError) {
+            setError(playersError.message);
+            setLoading(false);
+            return;
+          }
+
+          // 4. Merge: combinar dados de players com leaderboard
+          enrichedPlayers = (playersData || [])
+            .map((player) => {
+              const leaderboardEntry = leaderboardMap.get(player.id);
+              return {
+                ...player,
+                rating: leaderboardEntry?.rating ?? 0,
+                total_kills: leaderboardEntry?.total_kills ?? 0,
+                total_position_points: leaderboardEntry?.total_position_points ?? 0,
+              };
+            })
+            // 5. Manter ordem do leaderboard
+            .sort((a, b) => {
+              const indexA = leaderboardPlayerIds.indexOf(a.id);
+              const indexB = leaderboardPlayerIds.indexOf(b.id);
+              return indexA - indexB;
+            });
+        }
 
         setPlayers(enrichedPlayers);
         if (enrichedPlayers.length > 0) {
@@ -490,7 +652,7 @@ export default function Leaderboard() {
             .from('player_profile_tags')
             .select(`
               player_id,
-              tags!inner(name)
+              tags!inner(name, category, placement, season_number)
             `)
             .in('player_id', leaderboardPlayerIds);
 
@@ -502,7 +664,10 @@ export default function Leaderboard() {
                 tagsMap.set(playerId, []);
               }
               tagsMap.get(playerId)!.push({
-                tag_name: (item.tags as any).name
+                tag_name: (item.tags as any).name,
+                category: (item.tags as any).category,
+                placement: (item.tags as any).placement,
+                season_number: (item.tags as any).season_number
               });
             });
             setPlayerTags(tagsMap);
@@ -550,7 +715,7 @@ export default function Leaderboard() {
     fetchTitles();
   }, [selectedPlayer?.id, selectedSeasonId]);
 
-  const handlePlayerUpdate = (updatedPlayer: Player) => {
+  const handlePlayerUpdate = async (updatedPlayer: Player) => {
     setPlayers(
       players.map((p) =>
         p.id === updatedPlayer.id
@@ -572,6 +737,38 @@ export default function Leaderboard() {
           }
         : prev
     );
+
+    // Recarregar tags do player atualizado
+    try {
+      const { data: tagsData } = await supabase
+        .from('player_profile_tags')
+        .select(`
+          player_id,
+          tags!inner(name, category, placement, season_number)
+        `)
+        .eq('player_id', updatedPlayer.id);
+
+      if (tagsData) {
+        const updatedTags: PlayerTag[] = tagsData.map((item) => ({
+          tag_name: (item.tags as any).name,
+          category: (item.tags as any).category,
+          placement: (item.tags as any).placement,
+          season_number: (item.tags as any).season_number
+        }));
+
+        setPlayerTags((prevTags) => {
+          const newTags = new Map(prevTags);
+          if (updatedTags.length > 0) {
+            newTags.set(updatedPlayer.id, updatedTags);
+          } else {
+            newTags.delete(updatedPlayer.id);
+          }
+          return newTags;
+        });
+      }
+    } catch (err) {
+      console.error('Erro ao recarregar tags:', err);
+    }
 
     setIsEditModalOpen(false);
   };
@@ -713,6 +910,7 @@ export default function Leaderboard() {
                 player={selectedPlayer}
                 rank={players.findIndex((p) => p.id === selectedPlayer.id) + (page - 1) * pageSize + 1}                titles={selectedPlayerTitles}
                 activeTab={activeTab}
+                tags={playerTags.get(selectedPlayer.id) || []}
                 onEditClick={() => setIsEditModalOpen(true)}
               />
             ) : null}
@@ -832,6 +1030,8 @@ export default function Leaderboard() {
                 rank={players.findIndex((p) => p.id === selectedPlayer.id) + (page - 1) * pageSize + 1}
                 titles={selectedPlayerTitles}
                 activeTab={activeTab}
+                tags={playerTags.get(selectedPlayer.id) || []}
+                onClose={() => setIsMobileModalOpen(false)}
                 onEditClick={() => {
                   setIsMobileModalOpen(false);
                   setIsEditModalOpen(true);

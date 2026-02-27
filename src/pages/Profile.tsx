@@ -141,7 +141,7 @@ export default function Profile() {
             {player && (
               <div className="mb-8">
                 <h3 className="text-lg font-heading font-bold text-foreground mb-4 text-center">
-                  Estatísticas da Temporada
+                  Estatísticas Gerais
                 </h3>
                 <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
                   <div className="text-center">
