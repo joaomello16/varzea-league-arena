@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { X, User as UserIcon, Star, History } from 'lucide-react';
 import { GiLaurelCrown, GiCrownedSkull, GiImperialCrown } from 'react-icons/gi';
+import { MdOutlineLeaderboard } from 'react-icons/md';
 
 // Tipos para títulos
 interface PlayerTitle {
@@ -435,7 +436,10 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
                 {displayTags.map((tag) => {
                   // Define ícone baseado na categoria
                   let TagIcon = null;
-                  if (tag.category === 'kills') {
+                  if (tag.placement && tag.placement > 3) {
+                    // Placement > 3: usar ícone padrão
+                    TagIcon = MdOutlineLeaderboard;
+                  } else if (tag.category === 'kills') {
                     TagIcon = GiCrownedSkull;
                   } else if (tag.category === 'position points') {
                     TagIcon = GiLaurelCrown;
@@ -451,6 +455,8 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
                     colorClasses = 'text-cyan-200/80';
                   } else if (tag.placement === 3) {
                     colorClasses = 'text-slate-300';
+                  } else if (tag.placement && tag.placement > 3) {
+                    colorClasses = 'text-gray-400/70'; // Cor neutra para placement > 3
                   }
 
                   return (
@@ -736,7 +742,10 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
                     
                     // Define ícone baseado na categoria
                     let TagIcon = null;
-                    if (tag.category === 'kills') {
+                    if (tag.placement && tag.placement > 3) {
+                      // Placement > 3: usar ícone padrão
+                      TagIcon = MdOutlineLeaderboard;
+                    } else if (tag.category === 'kills') {
                       TagIcon = GiCrownedSkull;
                     } else if (tag.category === 'position points') {
                       TagIcon = GiLaurelCrown;
@@ -752,6 +761,8 @@ export function PlayerProfileModal({ player, onClose, onClaimSuccess }: PlayerPr
                       colorClasses = 'text-cyan-200/80 border-cyan-400/50';
                     } else if (tag.placement === 3) {
                       colorClasses = 'text-slate-300 border-slate-400/50';
+                    } else if (tag.placement && tag.placement > 3) {
+                      colorClasses = 'text-gray-400/70 border-gray-400/50'; // Cor neutra para placement > 3
                     }
 
                     return (

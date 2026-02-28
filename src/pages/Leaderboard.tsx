@@ -3,6 +3,7 @@ import { Layout } from '@/components/Layout';
 import { supabase, Player } from '@/lib/supabase';
 import { Trophy, Star, User, Edit2 } from 'lucide-react';
 import { GiLaurelCrown, GiCrownedSkull, GiImperialCrown } from 'react-icons/gi';
+import { MdOutlineLeaderboard } from 'react-icons/md';
 import { IoTrophySharp } from 'react-icons/io5';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCanEditPlayer } from '@/hooks/use-can-edit-player';
@@ -144,7 +145,10 @@ function PlayerCard({
               {tags.map((tag, index) => {
                 // Define ícone baseado na categoria
                 let TagIcon = null;
-                if (tag.category === 'kills') {
+                if (tag.placement && tag.placement > 3) {
+                  // Placement > 3: usar ícone padrão
+                  TagIcon = MdOutlineLeaderboard;
+                } else if (tag.category === 'kills') {
                   TagIcon = GiCrownedSkull;
                 } else if (tag.category === 'position points') {
                   TagIcon = GiLaurelCrown;
@@ -160,6 +164,8 @@ function PlayerCard({
                   colorClasses = 'text-cyan-200/80';
                 } else if (tag.placement === 3) {
                   colorClasses = 'text-slate-300';
+                } else if (tag.placement && tag.placement > 3) {
+                  colorClasses = 'text-gray-400/70'; // Cor neutra para placement > 3
                 }
 
                 // Verifica se tem números na tag
@@ -336,7 +342,10 @@ function RankingRow({
               .map((tag, index) => {
               // Define ícone baseado na categoria
               let TagIcon = null;
-              if (tag.category === 'kills') {
+              if (tag.placement && tag.placement > 3) {
+                // Placement > 3: usar ícone padrão
+                TagIcon = MdOutlineLeaderboard;
+              } else if (tag.category === 'kills') {
                 TagIcon = GiCrownedSkull;
               } else if (tag.category === 'position points') {
                 TagIcon = GiLaurelCrown;
@@ -352,6 +361,8 @@ function RankingRow({
                 colorClasses = 'text-cyan-200/60 border-cyan-400/40';
               } else if (tag.placement === 3) {
                 colorClasses = 'text-slate-300/70 border-slate-400/40';
+              } else if (tag.placement && tag.placement > 3) {
+                colorClasses = 'text-gray-400/70 border-gray-400/40'; // Cor neutra para placement > 3
               }
 
               return (

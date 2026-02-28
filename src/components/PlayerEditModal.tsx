@@ -3,6 +3,7 @@ import { Player } from '@/lib/supabase';
 import { supabase } from '@/lib/supabase';
 import { X, Upload, User as UserIcon, Tags } from 'lucide-react';
 import { GiLaurelCrown, GiCrownedSkull, GiImperialCrown } from 'react-icons/gi';
+import { MdOutlineLeaderboard } from 'react-icons/md';
 import { ImageCropper } from './ImageCropper';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -519,7 +520,10 @@ export function PlayerEditModal({
                     {displayTags.map((tag) => {
                       // Define ícone baseado na categoria
                       let TagIcon = null;
-                      if (tag.category === 'kills') {
+                      if (tag.placement && tag.placement > 3) {
+                        // Placement > 3: usar ícone padrão
+                        TagIcon = MdOutlineLeaderboard;
+                      } else if (tag.category === 'kills') {
                         TagIcon = GiCrownedSkull;
                       } else if (tag.category === 'position points') {
                         TagIcon = GiLaurelCrown;
@@ -535,6 +539,8 @@ export function PlayerEditModal({
                         colorClasses = 'text-cyan-200/80';
                       } else if (tag.placement === 3) {
                         colorClasses = 'text-slate-300';
+                      } else if (tag.placement && tag.placement > 3) {
+                        colorClasses = 'text-gray-400/70'; // Cor neutra para placement > 3
                       }
 
                       return (
@@ -671,7 +677,10 @@ export function PlayerEditModal({
                   
                   // Define ícone baseado na categoria
                   let TagIcon = null;
-                  if (tag.category === 'kills') {
+                  if (tag.placement && tag.placement > 3) {
+                    // Placement > 3: usar ícone padrão
+                    TagIcon = MdOutlineLeaderboard;
+                  } else if (tag.category === 'kills') {
                     TagIcon = GiCrownedSkull;
                   } else if (tag.category === 'position points') {
                     TagIcon = GiLaurelCrown;
@@ -687,6 +696,8 @@ export function PlayerEditModal({
                     colorClasses = 'text-cyan-200/80 border-cyan-400/50';
                   } else if (tag.placement === 3) {
                     colorClasses = 'text-slate-300 border-slate-400/50';
+                  } else if (tag.placement && tag.placement > 3) {
+                    colorClasses = 'text-gray-400/70 border-gray-400/50'; // Cor neutra para placement > 3
                   }
 
                   return (
