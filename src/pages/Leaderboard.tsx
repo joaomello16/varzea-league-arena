@@ -1250,6 +1250,116 @@ export default function Leaderboard() {
                     </div>
                   </div>
                 </div>
+
+                {/* Sistema de TAGs da Temporada */}
+<div className="mt-10 pt-8 border-t border-border">
+  <div className="flex items-center gap-4 mb-6">
+    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-yellow-500 to-amber-600 flex items-center justify-center flex-shrink-0">
+      <MdOutlineLeaderboard size={24} className="text-white" />
+    </div>
+    <h2 className="text-2xl font-bold text-amber-400">
+      Sistema de TAGs da Temporada
+    </h2>
+  </div>
+
+  <div className="mb-6">
+    <p className="text-muted-foreground leading-relaxed mb-4">
+      Ao final de cada temporada, os jogadores recebem <span className="text-foreground font-semibold">TAGs exclusivas</span> de acordo com seu desempenho nos rankings oficiais.
+    </p>
+
+    <p className="text-muted-foreground leading-relaxed">
+      Essas TAGs representam sua colocação final e podem ser <span className="text-foreground font-semibold">equipadas no perfil</span>, permitindo que todos visualizem seu desempenho naquela temporada.
+    </p>
+  </div>
+
+  {/* Rankings */}
+  <div className="mb-8">
+    <h3 className="text-xl font-bold text-foreground mb-4">
+      Rankings que distribuem TAGs
+    </h3>
+
+    <div className="grid gap-4">
+
+      <div className="card-base p-4 bg-gradient-to-r from-yellow-950/30 to-transparent border-l-4 border-yellow-500">
+        <div className="flex items-center gap-3 mb-2">
+          <GiImperialCrown className="text-yellow-400" size={20} />
+          <p className="font-bold text-foreground">Ranking de Rating</p>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Todos os <span className="text-foreground font-semibold">Top 20</span> da temporada recebem TAGs exclusivas de acordo com sua colocação final.
+        </p>
+      </div>
+
+      <div className="card-base p-4 bg-gradient-to-r from-cyan-950/30 to-transparent border-l-4 border-cyan-500">
+        <div className="flex items-center gap-3 mb-2">
+          <GiLaurelCrown className="text-cyan-400" size={20} />
+          <p className="font-bold text-foreground">Ranking de Pontos de Posição</p>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          TAGs especiais são distribuídas conforme o desempenho neste ranking.
+        </p>
+      </div>
+
+      <div className="card-base p-4 bg-gradient-to-r from-slate-950/30 to-transparent border-l-4 border-slate-400">
+        <div className="flex items-center gap-3 mb-2">
+          <GiCrownedSkull className="text-slate-300" size={20} />
+          <p className="font-bold text-foreground">Ranking de Kills</p>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          TAGs especiais são distribuídas conforme o desempenho neste ranking.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+{/* Raridades */}
+<div>
+  <h3 className="text-xl font-bold text-foreground mb-4">
+    Raridade das TAGs
+  </h3>
+
+  <div className="grid gap-3">
+
+    {/* Lendária */}
+    <div className="card-base p-4 border text-yellow-300/70 border-yellow-400/50">
+      <p className="font-bold mb-1">🏆 Lendária</p>
+      <p className="text-sm text-muted-foreground">
+        Concedida às colocações mais altas da temporada. Representa excelência máxima.
+      </p>
+    </div>
+
+    {/* Épica */}
+    <div className="card-base p-4 border text-cyan-200/60 border-cyan-400/40">
+      <p className="font-bold mb-1">✨ Épica</p>
+      <p className="text-sm text-muted-foreground">
+        Destinada a jogadores com desempenho extremamente competitivo.
+      </p>
+    </div>
+
+    {/* Rara */}
+    <div className="card-base p-4 border text-slate-300/70 border-slate-400/40">
+      <p className="font-bold mb-1">🔷 Rara</p>
+      <p className="text-sm text-muted-foreground">
+        Concedida a jogadores que se destacaram dentro do Top 20 da temporada.
+      </p>
+    </div>
+
+    {/* Comum */}
+    <div className="card-base p-4 border text-gray-400/70 border-gray-400/40">
+      <p className="font-bold mb-1">⚙ Comum</p>
+      <p className="text-sm text-muted-foreground">
+        Representa participação e desempenho competitivo dentro do ranking.
+      </p>
+    </div>
+
+  </div>
+
+  <p className="text-xs text-muted-foreground mt-4 pt-4 border-t border-border/50">
+    🔎 Cada TAG exibe a temporada correspondente (ex: S1, S2) e a posição alcançada no ranking.
+  </p>
+</div>
+</div>
               </div>
             </div>
           </div>
