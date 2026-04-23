@@ -23,7 +23,7 @@ export function PlayerSelect({ selectedPlayerId, onSelect, onPlayerNotFound }: P
   return (
     <div className="space-y-2">
       <label htmlFor="player-select" className="block text-sm font-medium text-muted-foreground">
-        Selecione seu nick 
+        Ja é player da Varzea League? Selecione seu nick
       </label>
       
       <div className="relative">
