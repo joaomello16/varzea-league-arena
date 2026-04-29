@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import Leaderboard from "./pages/Leaderboard";
 import Campeonatos from "./pages/Campeonatos";
 import Profile from "./pages/Profile";
+import Comunidade from "./pages/Comunidade";
 import AdminPlayers from "./pages/AdminPlayers";
 import Requests from "./pages/Requests";
 import NotFound from "./pages/NotFound";
@@ -59,6 +60,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/comunidade"
+              element={
+                <ProtectedRoute>
+                  <Comunidade />
                 </ProtectedRoute>
               }
             />

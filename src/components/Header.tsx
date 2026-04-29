@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase, Player } from '@/lib/supabase';
 import logo from '@/assets/logo1-removebg-preview.png';
-import { Menu, X, User, LogOut, ChevronDown, Bell } from 'lucide-react';
+import { Menu, X, User, Users, LogOut, ChevronDown, Bell } from 'lucide-react';
 
 export type Notification = {
   id: string;
@@ -289,6 +289,15 @@ export function Header() {
                   >
                     <User size={18} className="text-muted-foreground" />
                     <span className="text-foreground">Meu Perfil</span>
+                  </Link>
+
+                  <Link
+                    to="/comunidade"
+                    onClick={() => setProfileDropdownOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2 hover:bg-muted transition-colors"
+                  >
+                    <Users size={18} className="text-muted-foreground" />
+                    <span className="text-foreground">Comunidade</span>
                   </Link>
 
                   <button

@@ -17,17 +17,12 @@ export function useAvailablePlayers(searchTerm: string = '') {
         setLoading(true);
         setError(null);
 
-        let query = supabase
+        // Buscar todos os players sem vínculo (são poucos, podemos filtrar localmente para ser mais rápido)
+        const { data, error: err } = await supabase
           .from('players')
           .select('id, nick')
           .is('user_id', null)
           .order('nick');
-
-        if (searchTerm.trim()) {
-          query = query.ilike('nick', `%${searchTerm}%`);
-        }
-
-        const { data, error: err } = await query;
 
         if (err) throw err;
 
@@ -40,10 +35,12 @@ export function useAvailablePlayers(searchTerm: string = '') {
       }
     };
 
-    // Debounce search
-    const timer = setTimeout(fetchPlayers, 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+    fetchPlayers();
+  }, []);
 
-  return { players, loading, error };
+  const filteredPlayers = players.filter(player => 
+    player.nick.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return { players: filteredPlayers, loading, error };
 }

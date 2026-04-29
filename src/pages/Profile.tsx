@@ -34,37 +34,32 @@ export default function Profile() {
     }
   }, [user?.player_id]);
 
-  // Fetch season stats
+  // Fetch general stats
   useEffect(() => {
-    async function fetchSeasonStats() {
+    async function fetchGeneralStats() {
       if (!user?.player_id) {
         setSeasonStats(null);
         return;
       }
 
       try {
-        // Buscar temporada ativa
-        const { data: seasonData } = await supabase
-          .from('seasons')
-          .select('id')
-          .eq('active', true)
-          .single();
-
-        if (!seasonData) {
-          setSeasonStats(null);
-          return;
-        }
-
-        // Buscar stats do player na temporada ativa
+        // Buscar todas as estatísticas do player em todas as temporadas (Geral)
         const { data: statsData } = await supabase
           .from('leaderboard_by_season')
           .select('rating, total_kills, total_position_points')
-          .eq('player_id', user.player_id)
-          .eq('season_id', seasonData.id)
-          .single();
+          .eq('player_id', user.player_id);
 
-        if (statsData) {
-          setSeasonStats(statsData);
+        if (statsData && statsData.length > 0) {
+          // Somar estatísticas de todas as temporadas
+          const totalStats = statsData.reduce(
+            (acc, curr) => ({
+              rating: acc.rating + (curr.rating || 0),
+              total_kills: acc.total_kills + (curr.total_kills || 0),
+              total_position_points: acc.total_position_points + (curr.total_position_points || 0),
+            }),
+            { rating: 0, total_kills: 0, total_position_points: 0 }
+          );
+          setSeasonStats(totalStats);
         } else {
           setSeasonStats(null);
         }
@@ -74,7 +69,7 @@ export default function Profile() {
       }
     }
 
-    fetchSeasonStats();
+    fetchGeneralStats();
   }, [user?.player_id]);
 
   const formatDate = (dateString: string) => {

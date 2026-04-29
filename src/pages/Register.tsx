@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { PlayerSelect } from '@/components/PlayerSelect';
-import { PlayerRequestModal } from '@/components/PlayerRequestModal';
+import { supabase } from '@/lib/supabase';
 import { Eye, EyeOff, User, Users } from 'lucide-react';
 import logo from '@/assets/varzealogo.png';
 
 export default function Register() {
-  const { session, signUp, loading } = useAuth();
+  const { session, signUp, user, loading, registerUserWithPlayer } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -18,20 +19,24 @@ export default function Register() {
   const [selectedPlayerNick, setSelectedPlayerNick] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isPlayerRequestOpen, setIsPlayerRequestOpen] = useState(false);
-  const [requestSent, setRequestSent] = useState(false);
   const [userType, setUserType] = useState<'player' | 'visitor' | null>(null);
-  const [showUserTypeSelection, setShowUserTypeSelection] = useState(true);
+  const [step, setStep] = useState<'type' | 'account' | 'player_link'>('type');
+  const [accountCreated, setAccountCreated] = useState(false);
+
 
   if (loading) {
     return null;
   }
 
-  if (session) {
+  // Se já tem sessão, usuário carregado, tipo visitor OU tipo player com player_id, redireciona
+  if (session && user && (user.type === 'visitor' || user.player_id)) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Se já tem conta criada mas é player e falta o player_id, fica no step player_link
+  const showPlayerLinkStep = (session || accountCreated) && userType === 'player' && (!user || !user.player_id);
+
+  const handleSubmitAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -45,37 +50,71 @@ export default function Register() {
       return;
     }
 
-    // Validação de player apenas se o tipo for 'player'
-    if (userType === 'player' && !selectedPlayerId && !requestSent) {
-      setError('Selecione um player ou envie uma solicitação');
-      return;
-    }
-
     setIsSubmitting(true);
 
-    const { error } = await signUp(email, password, nick, selectedPlayerId || undefined);
+    const { error: signUpError } = await signUp(email, password, nick);
     
-    if (error) {
-      setError(error.message);
+    if (signUpError) {
+      setError(signUpError.message);
+      setIsSubmitting(false);
+    } else {
+      setAccountCreated(true);
+      if (userType === 'player') {
+        setStep('player_link');
+      }
+      setIsSubmitting(false);
     }
+  };
+
+  const handleLinkExistingPlayer = async (playerId: string) => {
+    if (!session?.user?.id) return;
+    setIsSubmitting(true);
+    setError(null);
+
+    const { error: rpcError } = await registerUserWithPlayer(session.user.id, playerId);
     
+    if (rpcError) {
+      setError(rpcError.message);
+    } else {
+      navigate('/dashboard');
+    }
     setIsSubmitting(false);
   };
 
-  const handlePlayerSelect = (playerId: string, playerNick: string) => {
-    setSelectedPlayerId(playerId);
-    setSelectedPlayerNick(playerNick);
-    setRequestSent(false);
-  };
+  const handleCreateNewPlayer = async (gameNick: string) => {
+    if (!session?.user?.id) return;
+    setIsSubmitting(true);
+    setError(null);
 
-  const handlePlayerRequestSuccess = () => {
-    setIsPlayerRequestOpen(false);
-    setRequestSent(true);
+    try {
+      // 1. Criar o player
+      const { data: playerData, error: playerError } = await supabase
+        .from('players')
+        .insert([{ nick: gameNick, user_id: session.user.id }])
+        .select()
+        .single();
+
+      if (playerError) throw playerError;
+
+      // 2. Vincular ao user
+      const { error: userError } = await supabase
+        .from('users')
+        .update({ player_id: playerData.id })
+        .eq('id', session.user.id);
+
+      if (userError) throw userError;
+
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Erro ao criar perfil de jogador');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleUserTypeSelect = (type: 'player' | 'visitor') => {
     setUserType(type);
-    setShowUserTypeSelection(false);
+    setStep('account');
   };
 
   return (
@@ -86,7 +125,7 @@ export default function Register() {
         </div>
         
         <div className="card-base p-8">
-          {showUserTypeSelection ? (
+          {step === 'type' && (
             <>
               <h1 className="text-2xl font-heading font-bold text-center mb-6 text-neon-blue">
                 Criar Conta
@@ -107,7 +146,7 @@ export default function Register() {
                       Sou jogador de Bullet Echo
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Vincule sua conta a um perfil de jogador
+                      Participe de torneios e acumule pontos
                     </p>
                   </div>
                 </button>
@@ -122,28 +161,24 @@ export default function Register() {
                       Sou visitante
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Apenas acompanhar o conteúdo da liga
+                      Acompanhe as notícias e os rankings
                     </p>
                   </div>
                 </button>
               </div>
 
-              <p className="text-center text-muted-foreground mt-6">
-                Já tem uma conta?{' '}
-                <Link to="/login" className="text-primary hover:underline">
-                  Entrar
-                </Link>
-              </p>
             </>
-          ) : (
+          )}
+
+          {step === 'account' && (
             <>
               <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-heading font-bold text-neon-blue">
-                  {userType === 'player' ? 'Criar Conta - Jogador' : 'Criar Conta - Visitante'}
+                  {userType === 'player' ? '1. Dados da Conta' : 'Criar Conta - Visitante'}
                 </h1>
                 <button
                   onClick={() => {
-                    setShowUserTypeSelection(true);
+                    setStep('type');
                     setUserType(null);
                     setError(null);
                   }}
@@ -153,10 +188,10 @@ export default function Register() {
                 </button>
               </div>
           
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmitAccount} className="space-y-4">
                 <div>
                   <label htmlFor="nick" className="block text-sm font-medium text-muted-foreground mb-2">
-                    Nome de Usuario
+                    Nome de Usuário
                   </label>
                   <input
                     id="nick"
@@ -164,7 +199,7 @@ export default function Register() {
                     value={nick}
                     onChange={(e) => setNick(e.target.value)}
                     className="input-base"
-                    placeholder="Usuario para o site"
+                    placeholder="Usuário para o site"
                     required
                     minLength={3}
                   />
@@ -204,7 +239,6 @@ export default function Register() {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                     >
                       {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
@@ -230,28 +264,11 @@ export default function Register() {
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
                     >
                       {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
                 </div>
-
-                {userType === 'player' && (
-                  <div className="bg-muted/50 p-3 rounded-md border border-border">
-                    <PlayerSelect
-                      selectedPlayerId={selectedPlayerId}
-                      onSelect={handlePlayerSelect}
-                      onPlayerNotFound={() => setIsPlayerRequestOpen(true)}
-                    />
-
-                    {requestSent && (
-                      <div className="mt-3 p-2 bg-green-900/20 border border-green-900/30 rounded text-sm text-green-600 flex items-center gap-2">
-                        ✓ Solicitação enviada com sucesso
-                      </div>
-                    )}
-                  </div>
-                )}
                 
                 {error && (
                   <p className="text-destructive text-sm text-center">{error}</p>
@@ -265,30 +282,81 @@ export default function Register() {
                   {isSubmitting ? (
                     <>
                       <span className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                      Criando conta...
+                      Processando...
                     </>
                   ) : (
-                    'Criar Conta'
+                    userType === 'player' ? 'Próximo Passo' : 'Criar Conta'
                   )}
                 </button>
               </form>
-              
-              <p className="text-center text-muted-foreground mt-6">
-                Já tem uma conta?{' '}
-                <Link to="/login" className="text-primary hover:underline">
-                  Entrar
-                </Link>
-              </p>
             </>
+          )}
+
+          {step === 'player_link' && (
+            <>
+              <div className="text-center mb-6">
+                <h1 className="text-2xl font-heading font-bold text-neon-blue mb-2">
+                  2. Perfil de Jogador
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Vincule sua conta ao seu nick do Bullet Echo ou crie um novo perfil.
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                <PlayerSelect
+                  selectedPlayerId={selectedPlayerId}
+                  onSelect={(id, n) => {
+                    setSelectedPlayerId(id);
+                    setSelectedPlayerNick(n);
+                  }}
+                  onPlayerNotFound={() => {}} // Agora handled internamente no PlayerSelect
+                />
+
+                {error && (
+                  <p className="text-destructive text-sm text-center">{error}</p>
+                )}
+
+                <div className="flex flex-col gap-3">
+                  {selectedPlayerId ? (
+                    <button
+                      onClick={() => handleLinkExistingPlayer(selectedPlayerId)}
+                      disabled={isSubmitting}
+                      className="btn-primary w-full flex items-center justify-center gap-2"
+                    >
+                      {isSubmitting ? 'Vinculando...' : 'Sim, este sou eu (Vincular)'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleCreateNewPlayer(selectedPlayerNick || nick)}
+                      disabled={isSubmitting || (selectedPlayerNick && selectedPlayerNick.length < 3)}
+                      className="btn-primary w-full flex items-center justify-center gap-2"
+                    >
+                      {isSubmitting ? 'Criando...' : `Criar perfil como "${selectedPlayerNick || nick}"`}
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={() => window.location.href = '/dashboard'}
+                    className="btn-ghost text-xs"
+                  >
+                    Vincular depois
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+          {step !== 'player_link' && (
+            <p className="text-center text-muted-foreground mt-6">
+              Já tem uma conta?{' '}
+              <Link to="/login" className="text-primary hover:underline">
+                Entrar
+              </Link>
+            </p>
           )}
         </div>
       </div>
-
-      <PlayerRequestModal
-        isOpen={isPlayerRequestOpen}
-        onClose={() => setIsPlayerRequestOpen(false)}
-        onSuccess={handlePlayerRequestSuccess}
-      />
     </div>
   );
 }
+
